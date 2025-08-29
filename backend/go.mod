@@ -1,4 +1,4 @@
-module organizational-climate-survey
+module organizational-climate-survey/backend
 
 go 1.23.5
 
