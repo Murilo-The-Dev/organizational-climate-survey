@@ -16,7 +16,7 @@ Este repositório contém o **backend** do sistema de pesquisa de clima organiza
 
 ## 🚀 Tecnologias Utilizadas
 - **Go** (linguagem principal).
-- **MySQL** (banco de dados relacional).
+- **Postgres** (banco de dados relacional).
 - **godotenv** (carregar variáveis de ambiente).
 - **jwt-go** (autenticação com JSON Web Tokens).
 
