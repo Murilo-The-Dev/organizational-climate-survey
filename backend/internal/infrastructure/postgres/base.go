@@ -12,6 +12,16 @@ type DB struct {
     *sql.DB
 }
 
+// Config contém as configurações para conexão com o banco de dados
+type Config struct {
+    Host     string
+    Port     string
+    User     string
+    Password string
+    DBName   string
+    SSLMode  string
+}
+
 // NewDB cria uma nova conexão com PostgreSQL
 func NewDB(host, port, user, password, dbname string) (*DB, error) {
     psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
