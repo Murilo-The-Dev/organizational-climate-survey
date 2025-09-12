@@ -3,11 +3,14 @@ package entity
 import "time"
 
 type Resposta struct {
-    ID            int       `json:"id_resposta"`
-    IDPergunta    int       `json:"id_pergunta"`
-    DataSubmissao time.Time `json:"data_submissao"`
-    ValorResposta string    `json:"valor_resposta"`
+    ID             int       `json:"id_resposta"`
+    IDPergunta     int       `json:"id_pergunta"`
+    IDPesquisa     int       `json:"id_pesquisa"`
+    ValorResposta  string    `json:"valor_resposta"`
+    DataResposta   time.Time `json:"data_resposta"`
+    DataSubmissao  time.Time `json:"data_submissao"`
     
-    // Sem campos identificadores - garantia de anonimato
-    // Não armazenar IP, user-agent, session, etc.
+    // Relacionamentos - carregados sob demanda
+    Pergunta *Pergunta `json:"pergunta,omitempty"`
+    Pesquisa *Pesquisa `json:"pesquisa,omitempty"`
 }
