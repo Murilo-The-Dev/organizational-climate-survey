@@ -105,7 +105,8 @@ func (r *PerguntaRepository) GetByID(ctx context.Context, id int) (*entity.Pergu
     return pergunta, nil
 }
 
-func (r *PerguntaRepository) ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
+// GetByPesquisaID - método necessário para o DashboardUseCase
+func (r *PerguntaRepository) GetByPesquisaID(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
     query := `
         SELECT id_pergunta, id_pesquisa, texto_pergunta, tipo_pergunta, ordem_exibicao, opcoes_resposta
         FROM pergunta
@@ -138,6 +139,11 @@ func (r *PerguntaRepository) ListByPesquisa(ctx context.Context, pesquisaID int)
     }
     
     return perguntas, nil
+}
+
+func (r *PerguntaRepository) ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
+    // Este método já existe - pode usar GetByPesquisaID ou manter ambos
+    return r.GetByPesquisaID(ctx, pesquisaID)
 }
 
 func (r *PerguntaRepository) Update(ctx context.Context, pergunta *entity.Pergunta) error {
