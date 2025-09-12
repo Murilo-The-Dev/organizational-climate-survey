@@ -11,6 +11,8 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import LogoAtmos from "@/public/images/logoAtmos.svg";
+import Image from "next/image";
 
 type SidebarProps = {
   isOpen: boolean;
@@ -35,14 +37,15 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "bg-background text-foreground w-64 h-screen p-4 border-r flex flex-col fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out",
+        "bg-background rounded-r-4xl rounded-l-4xl text-foreground w-64 h-screen p-4 border-r flex flex-col fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out",
         !isOpen && "-translate-x-full",
         "md:translate-x-0 md:sticky"
       )}
     >
-      <div className="mb-10 px-2">
-        <h1 className="text-xl font-bold">Atmos</h1>
-        <p className="text-sm text-muted-foreground">Análise Organizacional</p>
+      <div className="flex justify-center items-center mb-10 px-2">
+        <h1 className="text-xl font-bold">
+          <Image src={LogoAtmos} alt="Logo Atmos" width={50} height={50} />
+        </h1>
       </div>
 
       <nav className="flex flex-col gap-2">
@@ -54,7 +57,10 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             <Link href={link.href} key={link.label}>
               <Button
                 variant={isActive ? "secondary" : "ghost"}
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start cursor-pointer",
+                  !isActive && "hover:bg-blue-600 hover:text-white"
+                )}
               >
                 <Icon className="h-4 w-4 mr-2" />
                 {link.label}

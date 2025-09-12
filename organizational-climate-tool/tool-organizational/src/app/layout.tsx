@@ -15,6 +15,9 @@ const interMono = Inter({
 export const metadata: Metadata = {
   title: "Atmos",
   description: "Monitorando o clima organizacional da sua empresa",
+  icons: {
+    icon: "./public/images/logoAtmos.svg",
+  },
 };
 
 export default function RootLayout({
