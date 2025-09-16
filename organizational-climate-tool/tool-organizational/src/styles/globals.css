@@ -76,6 +76,16 @@
   --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
+.root {
+    --color-blue-100: oklch(0.93 0.03 256);
+    --color-blue-200: oklch(0.88 0.06 254);
+    --color-blue-300: oklch(0.81 0.10 252);
+    --color-blue-400: oklch(0.71 0.14 255);
+    --color-blue-500: oklch(0.62 0.19 260);
+    --color-blue-600: oklch(0.55 0.22 263);
+    --color-blue-700: oklch(0.49 0.22 264);
+}
+
 .dark {
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);

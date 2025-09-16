@@ -1,5 +1,6 @@
 import StatCardGrids from "@/components/dashboard/StatCardGrids";
-import { EngagementChart } from "@/components/dashboard/EngagementChart";
+import { EngagementChart } from "@/components/dashboard/charts/EngagementChart";
+import { ChartPieLabel } from "@/components/dashboard/charts/PieChart";
 import { DataTable } from "@/components/dashboard/DataTable";
 
 const DashboardPage = () => {
@@ -12,16 +13,19 @@ const DashboardPage = () => {
 
       <StatCardGrids />
 
-      <div className="flex flex-col gap-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="lg:col-span-4">
           <EngagementChart />
         </div>
-        <div className="lg:col-span-3">
+          <div className="">
+              <ChartPieLabel />
+          </div>
+      </div>
+        <div className="mt-6">
           <div className="bg-background rounded-lg border p-4 h-full">
             <DataTable />
           </div>
         </div>
-      </div>
     </section>
   );
 };

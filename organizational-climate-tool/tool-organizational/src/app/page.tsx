@@ -1,9 +1,6 @@
-import Sidebar from "@/components/layout/Sidebar";
 
-export default function Page() {
-  return (
-    <>
-      <Sidebar isOpen={true} />
-    </>
-  );
+import { redirect } from 'next/navigation';
+export default function HomePage() {
+    redirect('/dashboard');
+    return null;
 }

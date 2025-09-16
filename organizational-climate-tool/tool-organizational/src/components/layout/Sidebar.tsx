@@ -35,13 +35,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const pathname = usePathname();
 
   return (
-    <aside
-      className={cn(
-        "bg-background rounded-r-4xl rounded-l-4xl text-foreground w-64 h-screen p-4 border-r flex flex-col fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out",
-        !isOpen && "-translate-x-full",
-        "md:translate-x-0 md:sticky"
-      )}
-    >
+      <aside
+          className={cn(
+              "bg-background text-foreground h-screen p-3 border-r flex flex-col sticky top-0 left-0 z-40",
+              "w-[72px] hover:w-64 transition-all duration-300 ease-in-out group"
+          )}
+      >
       <div className="flex justify-center items-center mb-10 px-2">
         <h1 className="text-xl font-bold">
           <Image src={LogoAtmos} alt="Logo Atmos" width={50} height={50} />
@@ -62,8 +61,17 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                   !isActive && "hover:bg-blue-600 hover:text-white"
                 )}
               >
-                <Icon className="h-4 w-4 mr-2" />
-                {link.label}
+                <Icon className="h-6 w-6 mr-2" />
+                  <span
+                      className={cn(
+                          "ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-200",
+
+                          "w-0 opacity-0",
+                          "group-hover:w-auto group-hover:opacity-100"
+                      )}
+                  >
+                  {link.label}
+                </span>
               </Button>
             </Link>
           );

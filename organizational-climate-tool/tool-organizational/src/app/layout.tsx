@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${interMono.variable} antialiased bg-zinc-50`}
       >
-        {children}
+      <DashboardLayout>{children}</DashboardLayout>
       </body>
     </html>
   );
