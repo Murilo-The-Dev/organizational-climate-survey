@@ -1,13 +1,6 @@
-// src/components/dashboard/StatCardsGrid.tsx
-
-"use client"; // Marcamos este container como um Client Component
+"use client";
 
 import StatCard from "./StatCard";
-
-// Documentação:
-// Este componente serve como um "container" no lado do cliente para
-// agrupar e renderizar todos os StatCards. Isso resolve o problema de um
-// Server Component (a página) renderizar diretamente múltiplos Client Components (os cards).
 
 const StatCardGrids = () => {
   return (

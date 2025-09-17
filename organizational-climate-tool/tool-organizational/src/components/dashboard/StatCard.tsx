@@ -1,13 +1,9 @@
-// src/components/dashboard/StatCard.tsx
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ClipboardCheck, Smile, Star } from "lucide-react";
 import React from "react";
 
-// Este objeto mapeia um nome (string) que vamos passar para o componente do ícone real.
-// É uma forma limpa de deixar o componente decidir qual ícone renderizar.
 const iconMap = {
   clipboardCheck: ClipboardCheck,
   users: Users,
@@ -15,8 +11,6 @@ const iconMap = {
   star: Star,
 };
 
-// Aqui, garantimos que a prop 'iconName' só possa ser uma das chaves do nosso iconMap.
-// Isso nos dá autocompletar e segurança de tipo!
 type IconName = keyof typeof iconMap;
 
 type StatCardProps = {
