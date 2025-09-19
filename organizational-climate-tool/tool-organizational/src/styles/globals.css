@@ -84,6 +84,8 @@
     --color-blue-500: oklch(0.62 0.19 260);
     --color-blue-600: oklch(0.55 0.22 263);
     --color-blue-700: oklch(0.49 0.22 264);
+    --color-positivo: oklch(0.93 0.03 256);
+    --color-negativo: oklch(0.88 0.06 254);
 }
 
 .dark {
@@ -118,6 +120,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+  --color-positivo: oklch(0.93 0.03 256);
+  --color-negativo: oklch(0.88 0.06 254);
 }
 
 @layer base {

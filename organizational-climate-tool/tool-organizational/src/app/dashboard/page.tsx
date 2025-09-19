@@ -21,17 +21,17 @@ const DashboardPage = () => {
         <ChartBarInteractive />
       </div>
 
-      <div className="mt-6 flex flex-row lg:grid lg:grid-cols-3 gap-4">
-        <div className="flex-1">
-          <ChartBarStacked />
-        </div>
-        <div className="flex-1">
-          <ChartPieLabel />
-        </div>
-        <div className="flex-1">
-          <ChartRadialShape />
-        </div>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+  <div>
+    <ChartBarStacked />
+  </div>
+  <div>
+    <ChartPieLabel />
+  </div>
+  <div>
+    <ChartRadialShape />
+  </div>
+</div>
       <div className="mt-6">
         <div className="bg-background rounded-lg border p-4 h-full">
           <DataTable />

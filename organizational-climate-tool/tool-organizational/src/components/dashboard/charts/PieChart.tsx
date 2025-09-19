@@ -21,35 +21,35 @@ import {
 export const description = "A pie chart with a label"
 
 const chartData = [
-    { browser: "chrome", visitors: 275, fill: "var(--color-blue-100)" },
-    { browser: "safari", visitors: 200, fill: "var(--color-blue-200)" },
-    { browser: "firefox", visitors: 187, fill: "var(--color-blue-300)" },
-    { browser: "edge", visitors: 173, fill: "var(--color-blue-400)" },
-    { browser: "other", visitors: 90, fill: "var(--color-blue-500)" },
+    { departamento: "Tecnologia da Informação", visitors: 275, fill: "var(--color-blue-100)" },
+    { departamento: "Produção", visitors: 200, fill: "var(--color-blue-200)" },
+    { departamento: "Recursos Humanos", visitors: 187, fill: "var(--color-blue-300)" },
+    { departamento: "Vendas", visitors: 173, fill: "var(--color-blue-400)" },
+    { departamento: "Engenharia", visitors: 90, fill: "var(--color-blue-500)" },
 ]
 
 const chartConfig = {
     visitors: {
-        label: "Visitors",
+        label: "Departamentos",
     },
     chrome: {
-        label: "Chrome",
+        label: "Tecnologia da Informação",
         color: "var(--color-blue-100)",
     },
     safari: {
-        label: "Safari",
+        label: "Produção",
         color: "var(--color-blue-200)",
     },
     firefox: {
-        label: "Firefox",
+        label: "Recursos Humanos",
         color: "var(color-blue-300)",
     },
     edge: {
-        label: "Edge",
+        label: "Vendas",
         color: "var(color-blue-400)",
     },
     other: {
-        label: "Other",
+        label: "Engenharia",
         color: "var(--color-blue-500)",
     },
 } satisfies ChartConfig
@@ -58,8 +58,8 @@ export function ChartPieLabel() {
     return (
         <Card className="flex flex-col">
             <CardHeader className="items-center pb-0">
-                <CardTitle>Pie Chart - Label</CardTitle>
-                <CardDescription>January - June 2024</CardDescription>
+                <CardTitle>Distribuição de Departamentos</CardTitle>
+                <CardDescription>Janeiro - Junho 2024</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 pb-0">
                 <ChartContainer
@@ -68,16 +68,16 @@ export function ChartPieLabel() {
                 >
                     <PieChart>
                         <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                        <Pie data={chartData} dataKey="visitors" label nameKey="browser" />
+                        <Pie data={chartData} dataKey="visitors" label nameKey="departamento" />
                     </PieChart>
                 </ChartContainer>
             </CardContent>
             <CardFooter className="flex-col gap-2 text-sm">
                 <div className="flex items-center gap-2 leading-none font-medium">
-                    Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+                    Aumento de 5.2% este mês <TrendingUp className="h-4 w-4" />
                 </div>
                 <div className="text-muted-foreground leading-none">
-                    Showing total visitors for the last 6 months
+                    Mostrando o total dos Departamentos que responderam a pesquisa
                 </div>
             </CardFooter>
         </Card>

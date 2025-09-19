@@ -22,16 +22,16 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 export const description = "A radial chart with a custom shape";
 
 const chartData = [
-  { browser: "safari", visitors: 1500, fill: "var(--color-blue-500)" },
+  { metrica: "participacao", valor: 82, fill: "var(--color-blue-600)" },
 ];
 
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
+  valor: {
+    label: "Participação",
   },
-  safari: {
-    label: "Safari",
-    color: "var(--color-blue-500)",
+  participacao: {
+    label: "Participação",
+    color: "var(--color-blue-600)",
   },
 } satisfies ChartConfig;
 
@@ -39,8 +39,8 @@ export function ChartRadialShape() {
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Radial Chart - Shape</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardTitle>Gráfico De Forma - Participação</CardTitle>
+        <CardDescription>Janeiro - Junho 2024</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -60,7 +60,7 @@ export function ChartRadialShape() {
               className="first:fill-muted last:fill-background"
               polarRadius={[86, 74]}
             />
-            <RadialBar dataKey="visitors" background />
+            <RadialBar dataKey="valor" background />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
                 content={({ viewBox }) => {
@@ -77,14 +77,14 @@ export function ChartRadialShape() {
                           y={viewBox.cy}
                           className="fill-foreground text-4xl font-bold"
                         >
-                          {chartData[0].visitors.toLocaleString()}
+                          {chartData[0].valor.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          Visitors
+                          Participação
                         </tspan>
                       </text>
                     );
@@ -97,10 +97,10 @@ export function ChartRadialShape() {
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
         <div className="flex items-center gap-2 leading-none font-medium">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          Aumento de 5.2% este mês <TrendingUp className="h-4 w-4" />
         </div>
         <div className="text-muted-foreground leading-none">
-          Showing total visitors for the last 6 months
+          Mostrando a participação dos colaboradores na pesquisa
         </div>
       </CardFooter>
     </Card>

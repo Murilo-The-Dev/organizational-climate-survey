@@ -14,14 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ListFilter } from "lucide-react";
-import { FormsData } from "@/components/dashboard/FormsData";
+import { ListFilter, Plus } from "lucide-react";
+import { FormsData } from "@/components/forms/FormsData";
 
 
 const ResultadosPage = () => {
   return (
     <section className="container mx-auto px-4 mt-10">
+      <div className="flex flex-row gap-2 items-center justify-between">
       <h1 className="bg-blue-500 text-white p-2 rounded-lg w-fit text-3xl font-bold tracking-tight">Resultados Detalhados</h1>
+      <Button className="cursor-pointer text-white bg-blue-600 hover:bg-blue-500">Criar Pesquisa <Plus className="w-6 h-6" /></Button>
+      </div>
       <p className="text-muted-foreground mt-2 mb-6">
         Filtre e analise as respostas de cada pesquisa em detalhes.
       </p>
@@ -70,7 +73,7 @@ const ResultadosPage = () => {
             </div>
 
             
-            <Button className="w-fit self-end bg-blue-600 text-white hover:bg-blue-500 cursor-pointer">
+            <Button className="w-fit self-end cursor-pointer" variant="outline">
               Aplicar Filtros
             </Button>
           </div>

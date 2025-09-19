@@ -15,11 +15,14 @@ export function FormsData() {
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="w-full flex flex-row nowrap gap-2 items-center justify-center">
-      <h1 className=" text-blue-600 text-2xl font-bold">Formulários<ArrowDown className="w-6 h-6 text-blue-600" /></h1>
-      </div>
+  <h1 className="flex items-center gap-2 text-blue-600 text-2xl font-bold">
+    Formulários
+    <ArrowDown className="w-6 h-6 text-blue-600" />
+  </h1>
+</div>
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+            <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">
@@ -33,7 +36,7 @@ export function FormsData() {
 
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+            <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">
@@ -47,7 +50,7 @@ export function FormsData() {
 
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+            <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">
@@ -61,7 +64,7 @@ export function FormsData() {
 
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+            <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">
@@ -75,7 +78,7 @@ export function FormsData() {
 
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+            <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">
@@ -89,7 +92,7 @@ export function FormsData() {
 
         <Card className="hover:shadow-lg hover:translate-y-[-5px] transition-all duration-300">
           <CardHeader>
-            <CardDescription>Descrição do Formulário</CardDescription>
+              <CardDescription>Setor ou Equipe</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-row gap-2 items-center justify-between">

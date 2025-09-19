@@ -23,21 +23,21 @@ import {
 export const description = "A stacked bar chart with a legend";
 
 const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
+  { month: "January", positivo: 186, negativo: 80 },
+  { month: "February", positivo: 305, negativo: 200 },
+  { month: "March", positivo: 237, negativo: 120 },
+  { month: "April", positivo: 73, negativo: 190 },
+  { month: "May", positivo: 209, negativo: 130 },
+  { month: "June", positivo: 214, negativo: 140 },
 ];
 
 const chartConfig = {
-  desktop: {
-    label: "Desktop",
+  positivo: {
+    label: "Positivo",
     color: "var(--color-blue-400)",
   },
-  mobile: {
-    label: "Mobile",
+  negativo: {
+    label: "Negativo",
     color: "var(--color-blue-600)",
   },
 } satisfies ChartConfig;
@@ -46,8 +46,8 @@ export function ChartBarStacked() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bar Chart - Stacked + Legend</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardTitle>Gráfico de Barras - Positivo + Negativo</CardTitle>
+        <CardDescription>Janeiro - Junho 2024</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -63,15 +63,15 @@ export function ChartBarStacked() {
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
             <ChartLegend content={<ChartLegendContent />} />
             <Bar
-              dataKey="desktop"
+              dataKey="positivo"
               stackId="a"
-              fill="var(--color-desktop)"
+              fill="var(--color-positivo)"
               radius={[0, 0, 4, 4]}
             />
             <Bar
-              dataKey="mobile"
+              dataKey="negativo"
               stackId="a"
-              fill="var(--color-mobile)"
+              fill="var(--color-negativo)"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
@@ -79,10 +79,10 @@ export function ChartBarStacked() {
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 leading-none font-medium">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          Aumento de 5.2% este mês <TrendingUp className="h-4 w-4" />
         </div>
         <div className="text-muted-foreground leading-none">
-          Showing total visitors for the last 6 months
+          Mostrando o total de Respostas para os últimos 6 meses
         </div>
       </CardFooter>
     </Card>

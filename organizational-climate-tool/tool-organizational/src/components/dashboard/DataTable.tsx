@@ -14,6 +14,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,47 +37,137 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const data: Payment[] = [
-  {
-    id: "m5gr84i9",
-    amount: 316,
-    status: "success",
-    email: "ken99@example.com",
+const dadosPesquisas: Pesquisa[] = [
+  { id: "PESQ-001", 
+    titulo: "Engajamento Q1 2025", 
+    status: "concluido", participantes: 152, 
+    dataCriacao: "2025-03-28" 
   },
-  {
-    id: "3u1reuv4",
-    amount: 242,
-    status: "success",
-    email: "Abe45@example.com",
+  { id: "PESQ-002", 
+    titulo: "Feedback de Liderança H1", 
+    status: "concluido", 
+    participantes: 140, 
+    dataCriacao: "2025-06-15" 
   },
-  {
-    id: "derv1ws0",
-    amount: 837,
-    status: "processing",
-    email: "Monserrat44@example.com",
+  { id: "PESQ-003", 
+    titulo: "Pesquisa de Satisfação Anual 2024", 
+    status: "concluido", 
+    participantes: 180, 
+    dataCriacao: "2024-12-20"
+   },
+  { id: "PESQ-004", 
+    titulo: "Clima Organizacional H2", 
+    status: "em_andamento", 
+    participantes: 125, 
+    dataCriacao: "2025-09-01" 
   },
-  {
-    id: "5kma53ae",
-    amount: 874,
-    status: "success",
-    email: "Silas22@example.com",
+  { id: "PESQ-005", 
+    titulo: "Onboarding Novos Contratados", 
+    status: "em_andamento", 
+    participantes: 25, 
+    dataCriacao: "2025-09-10" 
   },
-  {
-    id: "bhqecj4p",
-    amount: 721,
-    status: "failed",
-    email: "carmella@example.com",
+  { id: "PESQ-006", 
+    titulo: "Avaliação de Benefícios", 
+    status: "rascunho", 
+    participantes: 0, 
+    dataCriacao: "2025-09-18" 
+  },
+  { id: "PESQ-007", 
+    titulo: "Engajamento Q2 2025", 
+    status: "rascunho", 
+    participantes: 0, 
+    dataCriacao: "2025-09-15" 
+  },
+  { id: "PESQ-008", 
+    titulo: "Segurança Psicológica", 
+    status: "concluido", 
+    participantes: 165, 
+    dataCriacao: "2025-01-30" 
+  },
+  { id: "PESQ-009", 
+    titulo: "Comunicação Interna", 
+    status: "em_andamento", 
+    participantes: 95, 
+    dataCriacao: "2025-08-22" 
+  },
+  { id: "PESQ-010", 
+    titulo: "Planejamento Estratégico 2026", 
+    status: "rascunho",
+     participantes: 0, 
+     dataCriacao: "2025-09-19" 
+    },
+  { id: "PESQ-011", 
+    titulo: "Ferramentas de Trabalho", 
+    status: "concluido", 
+    participantes: 170, 
+    dataCriacao: "2025-05-10" 
+  },
+  { id: "PESQ-012", 
+    titulo: "e-NPS Semestral", 
+    status: "em_andamento", 
+    participantes: 110, 
+    dataCriacao: "2025-09-05" 
+  },
+  { id: "PESQ-003", 
+    titulo: "Engajamento Q1 2025", 
+    status: "concluido", participantes: 152, 
+    dataCriacao: "2025-03-28" 
+  },
+  { id: "PESQ-004", 
+    titulo: "Feedback de Liderança H1", 
+    status: "concluido", 
+    participantes: 140, 
+    dataCriacao: "2025-06-15" 
+  },
+  { id: "PESQ-005", 
+    titulo: "Pesquisa de Satisfação Anual 2024", 
+    status: "concluido", 
+    participantes: 180, 
+    dataCriacao: "2024-12-20"
+   },
+  { id: "PESQ-006", 
+    titulo: "Clima Organizacional H2", 
+    status: "em_andamento", 
+    participantes: 125, 
+    dataCriacao: "2025-09-01" 
+  },
+  { id: "PESQ-007", 
+    titulo: "Onboarding Novos Contratados", 
+    status: "em_andamento", 
+    participantes: 25, 
+    dataCriacao: "2025-09-10" 
+  },
+  { id: "PESQ-008", 
+    titulo: "Avaliação de Benefícios", 
+    status: "rascunho", 
+    participantes: 0, 
+    dataCriacao: "2025-09-18" 
+  },
+  { id: "PESQ-009", 
+    titulo: "Engajamento Q2 2025", 
+    status: "concluido", 
+    participantes: 0, 
+    dataCriacao: "2025-09-15" 
+  },
+  { id: "PESQ-010", 
+    titulo: "Segurança Psicológica", 
+    status: "concluido", 
+    participantes: 165, 
+    dataCriacao: "2025-01-30" 
   },
 ];
 
-export type Payment = {
+export type Pesquisa = {
   id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
+  titulo: string;
+  status: "concluido" | "em_andamento" | "rascunho";
+  participantes: number;
+  dataCriacao: string;
 };
 
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<Pesquisa>[] = [
+  // Coluna de seleção (pode manter a mesma)
   {
     id: "select",
     header: ({ table }) => (
@@ -96,71 +187,49 @@ export const columns: ColumnDef<Payment>[] = [
         aria-label="Select row"
       />
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
+  // Nova coluna 'Título da Pesquisa'
+  {
+    accessorKey: "titulo",
+    header: "Título",
+  },
+  // Nova coluna 'Status' com o Badge
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("status")}</div>
-    ),
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Email
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
-  },
-  {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
-
-      return <div className="text-right font-medium">{formatted}</div>;
+      // Adapte o StatusBadge para os novos status
+      return <StatusBadge status={row.getValue("status")} />;
     },
   },
+  // Nova coluna 'Participantes'
+  {
+    accessorKey: "participantes",
+    header: "Participantes",
+  },
+  // Nova coluna 'Data de Criação'
+  {
+    accessorKey: "dataCriacao",
+    header: "Data de Criação",
+  },
+  // Coluna de Ações
   {
     id: "actions",
-    enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original;
-
+      const pesquisa = row.original;
       return (
         <DropdownMenu>
-          <DropdownMenuLabel>Ações</DropdownMenuLabel>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal />
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
-              Copiar ID do pagamento
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Visualizar cliente</DropdownMenuItem>
-            <DropdownMenuItem>
-              Visualizar detalhes do pagamento
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuItem>Ver Resultados</DropdownMenuItem>
+            <DropdownMenuItem>Editar Pesquisa</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -179,7 +248,7 @@ export function DataTable() {
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
-    data,
+    data: dadosPesquisas,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -201,10 +270,10 @@ export function DataTable() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filtrar emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          placeholder="Filtrar titulos..."
+          value={(table.getColumn("titulo")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+            table.getColumn("titulo")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -288,24 +357,26 @@ export function DataTable() {
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="text-muted-foreground flex-1 text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {table.getFilteredRowModel().rows.length} row(s) selected
         </div>
         <div className="space-x-2">
-          <Button
+        <Button
+            className="cursor-pointer"
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            Anterior
           </Button>
           <Button
+            className="cursor-pointer"
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            Próximo
           </Button>
         </div>
       </div>
