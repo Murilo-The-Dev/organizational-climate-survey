@@ -26,8 +26,8 @@ interface NavLink {
 
 const navLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/resultados", label: "Resultados", icon: BarChart3 },
   { href: "/pesquisas", label: "Pesquisas", icon: NotebookText },
+  { href: "/resultados", label: "Resultados", icon: BarChart3 },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 

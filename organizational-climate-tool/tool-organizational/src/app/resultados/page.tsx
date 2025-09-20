@@ -1,3 +1,4 @@
+// src/app/resultados/page.tsx
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,75 +15,61 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ListFilter, Plus } from "lucide-react";
-import { FormsData } from "@/components/forms/FormsData";
+import { ListFilter } from "lucide-react";
+import { ResultsDataTable } from "@/components/dashboard/ResultsDataTable";
 
+// Importando os dados de exemplo que definimos dentro da ResultsDataTable
+// No futuro, esses dados virão de uma API
+import { data as mockResults } from "@/components/dashboard/ResultsDataTable";
 
 const ResultadosPage = () => {
   return (
     <section className="container mx-auto px-4 mt-10">
-      <div className="flex flex-row gap-2 items-center justify-between">
-      <h1 className="bg-blue-500 text-white p-2 rounded-lg w-fit text-3xl font-bold tracking-tight">Resultados Detalhados</h1>
-      <Button className="cursor-pointer text-white bg-blue-600 hover:bg-blue-500">Criar Pesquisa <Plus className="w-6 h-6" /></Button>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Resultados Detalhados
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Filtre e analise as respostas de cada pesquisa em detalhes.
+          </p>
+        </div>
+        <Button>Exportar Relatório</Button>
       </div>
-      <p className="text-muted-foreground mt-2 mb-6">
-        Filtre e analise as respostas de cada pesquisa em detalhes.
-      </p>
-      <Card>
+
+      {/* Barra de Filtros */}
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ListFilter className="h-5 w-5 text-blue-700" />
+            <ListFilter className="h-5 w-5" />
             Filtros de Análise
           </CardTitle>
-          <CardDescription>
-            Selecione uma pesquisa e refine os dados para encontrar insights.
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="pesquisa" className="text-sm font-medium">
-                Pesquisa
-              </label>
-              <Select>
-                <SelectTrigger id="pesquisa">
-                  <SelectValue placeholder="Selecione a pesquisa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="q1-2025">Engajamento Q1 2025</SelectItem>
-                  <SelectItem value="q4-2024">Liderança Q4 2024</SelectItem>
-                  <SelectItem value="e-nps-2024">e-NPS Anual 2024</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="departamento" className="text-sm font-medium">
-                Departamento
-              </label>
-              <Select>
-                <SelectTrigger id="departamento">
-                  <SelectValue placeholder="Todos os departamentos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tecnologia">Tecnologia</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="rh">Recursos Humanos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            
-            <Button className="w-fit self-end cursor-pointer" variant="outline">
-              Aplicar Filtros
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a pesquisa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="q1-2025">Engajamento Q1 2025</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os departamentos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tecnologia">Tecnologia</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button className="md:w-fit">Aplicar Filtros</Button>
           </div>
         </CardContent>
       </Card>
-      
-      <div className="mt-6">
-            <FormsData />
-      </div>
+
+      {/* Tabela de Resultados */}
+      <ResultsDataTable data={mockResults} />
     </section>
   );
 };
