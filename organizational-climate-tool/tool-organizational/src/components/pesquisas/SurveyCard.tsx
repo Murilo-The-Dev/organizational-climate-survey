@@ -12,7 +12,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
 
-// Definimos as propriedades que cada card de pesquisa irá receber
 type SurveyCardProps = {
   title: string;
   description: string;
@@ -27,7 +26,7 @@ export const SurveyCard = ({
   creationDate,
 }: SurveyCardProps) => {
   return (
-    <Card className="hover:shadow-lg hover:border-primary transition-all duration-300">
+    <Card className="hover:shadow-lg hover:border-blue-600 hover:translate-y-[-5px] transition-all duration-500">
       <CardHeader>
         <Badge variant="secondary" className="w-fit">
           {tag}
@@ -41,7 +40,7 @@ export const SurveyCard = ({
       </CardContent>
       <CardFooter className="flex justify-between items-center text-sm text-muted-foreground">
         <span>Criado em: {creationDate}</span>
-        <Button>
+        <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500">
           <Eye className="mr-2 h-4 w-4" /> Ver mais
         </Button>
       </CardFooter>

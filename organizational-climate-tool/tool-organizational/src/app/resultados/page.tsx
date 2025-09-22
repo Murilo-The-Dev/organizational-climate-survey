@@ -1,4 +1,3 @@
-// src/app/resultados/page.tsx
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ListFilter } from "lucide-react";
+import {  ListFilter, Filter, ArrowDownToLine } from "lucide-react";
 import { ResultsDataTable } from "@/components/dashboard/ResultsDataTable";
 
-// Importando os dados de exemplo que definimos dentro da ResultsDataTable
-// No futuro, esses dados virão de uma API
 import { data as mockResults } from "@/components/dashboard/ResultsDataTable";
 
 const ResultadosPage = () => {
@@ -34,10 +31,9 @@ const ResultadosPage = () => {
             Filtre e analise as respostas de cada pesquisa em detalhes.
           </p>
         </div>
-        <Button>Exportar Relatório</Button>
+        <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300"> <ArrowDownToLine className="h-5 w-5" /> Exportar Relatório</Button>
       </div>
 
-      {/* Barra de Filtros */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -63,12 +59,11 @@ const ResultadosPage = () => {
                 <SelectItem value="tecnologia">Tecnologia</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="md:w-fit">Aplicar Filtros</Button>
+            <Button className="md:w-fit cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300"> <Filter className="h-5 w-5" /> Aplicar Filtros</Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabela de Resultados */}
       <ResultsDataTable data={mockResults} />
     </section>
   );
