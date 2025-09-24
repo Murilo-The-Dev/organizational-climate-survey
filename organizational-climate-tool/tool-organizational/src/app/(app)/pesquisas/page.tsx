@@ -22,6 +22,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreateSurveyForm } from "@/components/forms/CreateSurveyForm";
+import { SurveyDetailsModal } from "@/components/modals/SurveyDetailsModal";
+import { Pesquisa } from "@/components/dashboard/DataTable";
+
+type Survey = Pesquisa & {
+  title: string;
+  description: string;
+  status: string;
+  tag: string;
+  creationDate: string;
+  onViewDetails: () => void;
+};
 
 const mockSurveys = [
   {
@@ -84,6 +95,9 @@ const mockSurveys = [
 
 const PesquisasPage = () => {
   const [isCreatingSurvey, setIsCreatingSurvey] = React.useState(false);
+  const [selectedSurvey, setSelectedSurvey] = React.useState<Survey | null>(
+    null
+  );
   const handleCreateSurvey = () => {
     setIsCreatingSurvey(true);
   };
@@ -156,13 +170,14 @@ const PesquisasPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSurveys.length > 0 ? (
-          filteredSurveys.map((survey) => (
+          filteredSurveys.map((survey: any) => (
             <SurveyCard
               key={survey.title}
               title={survey.title}
               description={survey.description}
               tag={survey.tag}
               creationDate={survey.creationDate}
+              onViewDetails={() => setSelectedSurvey(survey)}
             />
           ))
         ) : (
@@ -171,6 +186,15 @@ const PesquisasPage = () => {
           </p>
         )}
       </div>
+
+      <Dialog
+        open={!!selectedSurvey}
+        onOpenChange={(isOpen) => !isOpen && setSelectedSurvey(null)}
+      >
+        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col">
+          {selectedSurvey && <SurveyDetailsModal survey={selectedSurvey} />}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

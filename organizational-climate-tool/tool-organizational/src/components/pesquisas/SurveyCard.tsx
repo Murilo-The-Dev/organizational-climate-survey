@@ -1,5 +1,3 @@
-// src/components/dashboard/SurveyCard.tsx
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +15,7 @@ type SurveyCardProps = {
   description: string;
   tag: string;
   creationDate: string;
+  onViewDetails: () => void;
 };
 
 export const SurveyCard = ({
@@ -24,6 +23,7 @@ export const SurveyCard = ({
   description,
   tag,
   creationDate,
+  onViewDetails,
 }: SurveyCardProps) => {
   return (
     <Card className="hover:shadow-lg hover:border-blue-600 hover:translate-y-[-5px] transition-all duration-500">
@@ -40,7 +40,10 @@ export const SurveyCard = ({
       </CardContent>
       <CardFooter className="flex justify-between items-center text-sm text-muted-foreground">
         <span>Criado em: {creationDate}</span>
-        <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500">
+        <Button
+          className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500"
+          onClick={onViewDetails}
+        >
           <Eye className="mr-2 h-4 w-4" /> Ver mais
         </Button>
       </CardFooter>

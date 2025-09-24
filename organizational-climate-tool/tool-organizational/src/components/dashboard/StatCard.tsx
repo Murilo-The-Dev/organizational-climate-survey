@@ -17,6 +17,7 @@ type StatCardProps = {
   title: string;
   value: string;
   iconName: IconName;
+  change: string;
 };
 
 const StatCard = ({ title, value, iconName }: StatCardProps) => {
