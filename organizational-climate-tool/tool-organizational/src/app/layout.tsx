@@ -31,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${interMono.variable} antialiased bg-zinc-50`}
       >
-      <DashboardLayout>{children}</DashboardLayout>
+        <DashboardLayout>{children}</DashboardLayout>
       </body>
     </html>
   );

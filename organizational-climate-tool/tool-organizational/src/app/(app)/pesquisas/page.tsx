@@ -1,4 +1,6 @@
+"use client";
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,8 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle, Search } from "lucide-react";
+import { PlusCircle, Save, Search } from "lucide-react";
 import { SurveyCard } from "@/components/pesquisas/SurveyCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { CreateSurveyForm } from "@/components/forms/CreateSurveyForm";
 
 const mockSurveys = [
   {
@@ -68,10 +80,20 @@ const mockSurveys = [
     tag: "Satisfação do Trabalhador",
     creationDate: "22/12/2025",
   },
-  
 ];
 
 const PesquisasPage = () => {
+  const [isCreatingSurvey, setIsCreatingSurvey] = React.useState(false);
+  const handleCreateSurvey = () => {
+    setIsCreatingSurvey(true);
+  };
+
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const filteredSurveys = mockSurveys.filter((survey) =>
+    survey.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <section className="container mx-auto px-4 mt-10">
       <div className="flex items-center justify-between mb-8">
@@ -81,16 +103,43 @@ const PesquisasPage = () => {
             Crie, gerencie e visualize todos os seus formulários.
           </p>
         </div>
-        <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Criar Pesquisa
-        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Criar Pesquisa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Criar Nova Pesquisa</DialogTitle>
+              <DialogDescription>
+                Preencha as informações abaixo para criar um novo formulário.
+              </DialogDescription>
+            </DialogHeader>
+            <CreateSurveyForm />
+            <DialogFooter>
+              <Button
+                type="submit"
+                className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Salvar Pesquisa
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex items-center gap-4 mb-8">
         <div className="relative w-full md:w-1/3">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome..." className="pl-8" />
+          <Input
+            placeholder="Buscar por nome..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <Select>
           <SelectTrigger className="w-[180px]">
@@ -106,15 +155,21 @@ const PesquisasPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockSurveys.map((survey) => (
-          <SurveyCard
-            key={survey.title}
-            title={survey.title}
-            description={survey.description}
-            tag={survey.tag}
-            creationDate={survey.creationDate}
-          />
-        ))}
+        {filteredSurveys.length > 0 ? (
+          filteredSurveys.map((survey) => (
+            <SurveyCard
+              key={survey.title}
+              title={survey.title}
+              description={survey.description}
+              tag={survey.tag}
+              creationDate={survey.creationDate}
+            />
+          ))
+        ) : (
+          <p className="col-span-3 text-center text-muted-foreground py-10">
+            Nenhuma pesquisa encontrada com o termo "{searchQuery}".
+          </p>
+        )}
       </div>
     </section>
   );
