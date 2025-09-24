@@ -6,6 +6,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Pesquisa } from "@/components/dashboard/DataTable"; // Supondo que seu tipo e dados estão aqui
 import { SurveyOverviewTab } from "../pesquisas/SurveyOverviewTab";
+import { SurveyQuestionsTab } from "../pesquisas/SurveyQuestionsTab";
 
 type SurveyDetailsModalProps = {
   survey: Pesquisa;
@@ -33,9 +34,7 @@ export const SurveyDetailsModal = ({ survey }: SurveyDetailsModalProps) => {
           <SurveyOverviewTab />
         </TabsContent>
         <TabsContent value="questions" className="py-4">
-          <p className="h-full w-full overflow-y-auto">
-            Aqui ficará a lista de perguntas e as respostas dos colaboradores.
-          </p>
+          <SurveyQuestionsTab />
         </TabsContent>
       </Tabs>
     </>
