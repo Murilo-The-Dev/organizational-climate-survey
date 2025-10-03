@@ -11,6 +11,7 @@ import (
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -18,11 +19,13 @@ import (
 
 type UsuarioAdministradorHandler struct {
 	usuarioUseCase *usecase.UsuarioAdministradorUseCase
+	log            logger.Logger
 }
 
-func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministradorUseCase) *UsuarioAdministradorHandler {
+func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministradorUseCase, log logger.Logger) *UsuarioAdministradorHandler {
 	return &UsuarioAdministradorHandler{
 		usuarioUseCase: usuarioUseCase,
+		log:            log,
 	}
 }
 
@@ -49,42 +52,36 @@ type StatusUpdateRequest struct {
 // @Router /usuarios-administradores [post]
 func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	var req dto.UsuarioAdministradorCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validateUsuarioCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
-	// Gerar hash da senha
 	senhaHash, err := bcrypt.GenerateFromPassword([]byte(req.Senha), bcrypt.DefaultCost)
 	if err != nil {
+		h.log.WithContext(r.Context()).Error("Erro ao gerar hash: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "Erro ao processar senha", err.Error())
 		return
 	}
-
 	usuario := req.ToEntity(string(senhaHash))
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-
 	if err := h.usuarioUseCase.Create(r.Context(), usuario, userAdminID, clientIP); err != nil {
-		if strings.Contains(err.Error(), "já cadastrado") || strings.Contains(err.Error(), "já está sendo usado") {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID}).Error("Erro ao criar usuario: %v", err)
+		if strings.Contains(err.Error(), "já cadastrado") {
 			response.WriteError(w, http.StatusConflict, "Email já em uso", err.Error())
 			return
 		}
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
-	usuarioResponse := h.toUsuarioResponse(usuario)
-	response.WriteSuccess(w, http.StatusCreated, "Usuário criado com sucesso", usuarioResponse)
+	h.log.WithFields(map[string]interface{}{"usuario_id": usuario.ID, "user_admin_id": userAdminID}).Info("Usuário administrador criado com sucesso")
+	response.WriteSuccess(w, http.StatusCreated, "Usuário criado com sucesso", h.toUsuarioResponse(usuario))
 }
 
 // GetUsuarioAdministrador godoc

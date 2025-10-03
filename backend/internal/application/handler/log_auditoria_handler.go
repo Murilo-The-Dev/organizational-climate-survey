@@ -10,53 +10,42 @@ import (
 	"organizational-climate-survey/backend/internal/application/dto"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
-
+	"organizational-climate-survey/backend/pkg/logger"
 	"github.com/gorilla/mux"
 )
 
 type LogAuditoriaHandler struct {
 	logAuditoriaUseCase *usecase.LogAuditoriaUseCase
+	log                 logger.Logger
 }
 
-func NewLogAuditoriaHandler(logAuditoriaUseCase *usecase.LogAuditoriaUseCase) *LogAuditoriaHandler {
+func NewLogAuditoriaHandler(logAuditoriaUseCase *usecase.LogAuditoriaUseCase, log logger.Logger) *LogAuditoriaHandler {
 	return &LogAuditoriaHandler{
 		logAuditoriaUseCase: logAuditoriaUseCase,
+		log:                 log,
 	}
 }
 
-// CreateLogAuditoria godoc
-// @Summary Criar novo log de auditoria
-// @Description Cria um novo registro de log de auditoria (uso interno do sistema)
-// @Tags logs-auditoria
-// @Accept json
-// @Produce json
-// @Param log body dto.LogAuditoriaCreateRequest true "Dados do log"
-// @Success 201 {object} response.LogResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /logs-auditoria [post]
 func (h *LogAuditoriaHandler) CreateLogAuditoria(w http.ResponseWriter, r *http.Request) {
 	var req dto.LogAuditoriaCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validateLogCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
-	log := req.ToEntity()
-	
-	if err := h.logAuditoriaUseCase.Create(r.Context(), log); err != nil {
+	logEntity := req.ToEntity()
+	if err := h.logAuditoriaUseCase.Create(r.Context(), logEntity); err != nil {
+		h.log.WithContext(r.Context()).Error("Erro ao criar log auditoria: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
-	response.WriteSuccess(w, http.StatusCreated, "Log de auditoria criado com sucesso", response.ToLogResponse(log))
+	h.log.WithFields(map[string]interface{}{"log_id": logEntity.ID}).Info("Log auditoria criado com sucesso")
+	response.WriteSuccess(w, http.StatusCreated, "Log criado com sucesso", response.ToLogResponse(logEntity))
 }
 
 // GetLogAuditoria godoc

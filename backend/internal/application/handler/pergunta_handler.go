@@ -11,52 +11,40 @@ import (
 	"organizational-climate-survey/backend/internal/application/dto"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 )
 
 type PerguntaHandler struct {
 	perguntaUseCase *usecase.PerguntaUseCase
+	log             logger.Logger
 }
 
-func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase) *PerguntaHandler {
+func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase, log logger.Logger) *PerguntaHandler {
 	return &PerguntaHandler{
 		perguntaUseCase: perguntaUseCase,
+		log:             log,
 	}
 }
 
-// CreatePergunta godoc
-// @Summary Criar nova pergunta
-// @Description Cria uma nova pergunta para uma pesquisa
-// @Tags perguntas
-// @Accept json
-// @Produce json
-// @Param pergunta body dto.PerguntaCreateRequest true "Dados da pergunta"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas [post]
 func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request) {
 	var req dto.PerguntaCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validatePerguntaCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
 	pergunta := req.ToEntity()
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-
 	if err := h.perguntaUseCase.Create(r.Context(), pergunta, userAdminID, clientIP); err != nil {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar pergunta: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
@@ -69,6 +57,7 @@ func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request)
 		OpcoesResposta: pergunta.OpcoesResposta,
 	}
 
+	h.log.WithFields(map[string]interface{}{"pergunta_id": pergunta.ID, "user_admin_id": userAdminID}).Info("Pergunta criada com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Pergunta criada com sucesso", perguntaResponse)
 }
 

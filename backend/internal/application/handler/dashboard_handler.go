@@ -2,71 +2,59 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-
+	"fmt"
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 )
 
 type DashboardHandler struct {
 	dashboardUseCase *usecase.DashboardUseCase
+	log              logger.Logger
 }
 
-func NewDashboardHandler(dashboardUseCase *usecase.DashboardUseCase) *DashboardHandler {
+func NewDashboardHandler(dashboardUseCase *usecase.DashboardUseCase, log logger.Logger) *DashboardHandler {
 	return &DashboardHandler{
 		dashboardUseCase: dashboardUseCase,
+		log:              log,
 	}
 }
 
-// CreateDashboard godoc
-// @Summary Criar novo dashboard
-// @Description Cria um novo dashboard para uma pesquisa
-// @Tags dashboards
-// @Accept json
-// @Produce json
-// @Param dashboard body dto.DashboardCreateRequest true "Dados do dashboard"
-// @Success 201 {object} response.DashboardResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 409 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards [post]
 func (h *DashboardHandler) CreateDashboard(w http.ResponseWriter, r *http.Request) {
 	var req dto.DashboardCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validateDashboardCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
 	dashboard := req.ToEntity()
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
 	if err := h.dashboardUseCase.Create(r.Context(), dashboard, userAdminID, clientIP); err != nil {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar dashboard: %v", err)
 		if strings.Contains(err.Error(), "já existe") {
-			response.WriteError(w, http.StatusConflict, "Dashboard já existe para esta pesquisa", err.Error())
+			response.WriteError(w, http.StatusConflict, "Dashboard já existe", err.Error())
 			return
 		}
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
+	h.log.WithFields(map[string]interface{}{"dashboard_id": dashboard.ID, "user_admin_id": userAdminID, "client_ip": clientIP}).Info("Dashboard criado com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Dashboard criado com sucesso", response.ToDashboardResponse(dashboard))
 }
+
 
 // GetDashboard godoc
 // @Summary Buscar dashboard por ID

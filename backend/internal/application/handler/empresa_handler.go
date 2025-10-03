@@ -8,55 +8,42 @@ import (
 	"fmt"
 
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 )
 
 type EmpresaHandler struct {
 	empresaUseCase *usecase.EmpresaUseCase
+	log            logger.Logger
 }
 
-func NewEmpresaHandler(empresaUseCase *usecase.EmpresaUseCase) *EmpresaHandler {
+func NewEmpresaHandler(empresaUseCase *usecase.EmpresaUseCase, log logger.Logger) *EmpresaHandler {
 	return &EmpresaHandler{
 		empresaUseCase: empresaUseCase,
+		log:            log,
 	}
 }
 
-// CreateEmpresa godoc
-// @Summary Criar nova empresa
-// @Description Cria uma nova empresa no sistema
-// @Tags empresas
-// @Accept json
-// @Produce json
-// @Param empresa body dto.EmpresaCreateRequest true "Dados da empresa"
-// @Success 201 {object} response.EmpresaResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 409 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas [post]
 func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 	var req dto.EmpresaCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validateEmpresaCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
 	empresa := req.ToEntity()
-	
-	// Obter informações do usuário autenticado (middleware deve definir)
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-
 	if err := h.empresaUseCase.Create(r.Context(), empresa, userAdminID, clientIP); err != nil {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar empresa: %v", err)
 		if strings.Contains(err.Error(), "já cadastrada") {
 			response.WriteError(w, http.StatusConflict, "Empresa já existe", err.Error())
 			return
@@ -64,9 +51,10 @@ func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
+	h.log.WithFields(map[string]interface{}{"empresa_id": empresa.ID, "user_admin_id": userAdminID, "client_ip": clientIP}).Info("Empresa criada com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Empresa criada com sucesso", response.ToEmpresaResponse(empresa))
 }
+
 
 // GetEmpresa godoc
 // @Summary Buscar empresa por ID
