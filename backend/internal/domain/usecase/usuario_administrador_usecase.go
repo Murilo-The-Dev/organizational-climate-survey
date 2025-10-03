@@ -5,39 +5,39 @@ import (
 	"fmt"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/repository"
+	"organizational-climate-survey/backend/pkg/crypto"
 	"regexp"
 	"strings"
 	"time"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UsuarioAdministradorUseCase struct {
 	repo             repository.UsuarioAdministradorRepository
 	empresaRepo      repository.EmpresaRepository
 	logAuditoriaRepo repository.LogAuditoriaRepository
+	crypto           crypto.CryptoService
 }
 
 func NewUsuarioAdministradorUseCase(
 	repo repository.UsuarioAdministradorRepository,
 	empresaRepo repository.EmpresaRepository,
 	logRepo repository.LogAuditoriaRepository,
+	cryptoSvc crypto.CryptoService,
 ) *UsuarioAdministradorUseCase {
 	return &UsuarioAdministradorUseCase{
 		repo:             repo,
 		empresaRepo:      empresaRepo,
 		logAuditoriaRepo: logRepo,
+		crypto:           cryptoSvc,
 	}
 }
 
-// Authenticate verifica as credenciais do usuário e retorna os dados se válidas
 func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, senha, clientIP string) (*entity.UsuarioAdministrador, error) {
-	// Buscar usuário por email
 	usuario, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
-		// Log de tentativa de login falhada
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
-				IDUserAdmin:   0, // Usuário não autenticado
+				IDUserAdmin:   0,
 				TimeStamp:     time.Now(),
 				AcaoRealizada: "Tentativa de Login Falhada",
 				Detalhes:      fmt.Sprintf("Tentativa de login com email inexistente: %s", email),
@@ -48,9 +48,7 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 		return nil, fmt.Errorf("credenciais inválidas")
 	}
 
-	// Verificar se usuário está ativo
 	if usuario.Status != "Ativo" {
-		// Log de tentativa com usuário inativo
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
 				IDUserAdmin:   0,
@@ -64,9 +62,7 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 		return nil, fmt.Errorf("usuário inativo")
 	}
 
-	// Verificar senha
-	if !uc.ValidatePassword(senha, usuario.SenhaHash) {
-		// Log de senha incorreta
+	if !uc.crypto.CheckPasswordHash(senha, usuario.SenhaHash) {
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
 				IDUserAdmin:   0,
@@ -80,7 +76,6 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 		return nil, fmt.Errorf("credenciais inválidas")
 	}
 
-	// Log de login bem-sucedido
 	if uc.logAuditoriaRepo != nil {
 		log := &entity.LogAuditoria{
 			IDUserAdmin:   usuario.ID,
@@ -95,15 +90,7 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 	return usuario, nil
 }
 
-// ValidatePassword compara a senha em texto plano com o hash
-func (uc *UsuarioAdministradorUseCase) ValidatePassword(plainPassword, hashedPassword string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
-	return err == nil
-}
-
-// UpdatePassword atualiza a senha do usuário com nova implementação
 func (uc *UsuarioAdministradorUseCase) UpdatePassword(ctx context.Context, userID int, newPassword string, adminID int, clientIP string) error {
-	// Validações
 	if userID <= 0 {
 		return fmt.Errorf("ID do usuário inválido")
 	}
@@ -116,24 +103,20 @@ func (uc *UsuarioAdministradorUseCase) UpdatePassword(ctx context.Context, userI
 		return fmt.Errorf("nova senha deve ter pelo menos 8 caracteres")
 	}
 
-	// Verificar se usuário existe
 	usuario, err := uc.repo.GetByID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("usuário não encontrado: %v", err)
 	}
 
-	// Gerar hash da nova senha
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hashedPassword, err := uc.crypto.HashPassword(newPassword)
 	if err != nil {
 		return fmt.Errorf("erro ao gerar hash da senha: %v", err)
 	}
 
-	// Atualizar senha usando método do repository
-	if err := uc.repo.UpdatePassword(ctx, userID, string(hashedPassword)); err != nil {
+	if err := uc.repo.UpdatePassword(ctx, userID, hashedPassword); err != nil {
 		return fmt.Errorf("erro ao atualizar senha: %v", err)
 	}
 
-	// Log de auditoria
 	if uc.logAuditoriaRepo != nil && adminID > 0 {
 		log := &entity.LogAuditoria{
 			IDUserAdmin:   adminID,
@@ -148,13 +131,9 @@ func (uc *UsuarioAdministradorUseCase) UpdatePassword(ctx context.Context, userI
 	return nil
 }
 
-// RequestPasswordReset inicia o processo de recuperação de senha
 func (uc *UsuarioAdministradorUseCase) RequestPasswordReset(ctx context.Context, email, clientIP string) error {
-	// Buscar usuário por email
 	usuario, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
-		// Por segurança, não revelar se o email existe ou não
-		// Apenas log interno
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
 				IDUserAdmin:   0,
@@ -165,12 +144,10 @@ func (uc *UsuarioAdministradorUseCase) RequestPasswordReset(ctx context.Context,
 			}
 			uc.logAuditoriaRepo.Create(ctx, log)
 		}
-		return nil // Não retornar erro por segurança
+		return nil
 	}
 
-	// Verificar se usuário está ativo
 	if usuario.Status != "Ativo" {
-		// Log e não processar
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
 				IDUserAdmin:   0,
@@ -181,11 +158,9 @@ func (uc *UsuarioAdministradorUseCase) RequestPasswordReset(ctx context.Context,
 			}
 			uc.logAuditoriaRepo.Create(ctx, log)
 		}
-		return nil // Não retornar erro por segurança
+		return nil
 	}
 
-	// Aqui seria implementado o envio de email com token de recuperação
-	// Por enquanto, apenas log
 	if uc.logAuditoriaRepo != nil {
 		log := &entity.LogAuditoria{
 			IDUserAdmin:   usuario.ID,
@@ -197,15 +172,9 @@ func (uc *UsuarioAdministradorUseCase) RequestPasswordReset(ctx context.Context,
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}
 
-	// TODO: Implementar envio de email com token
-	// - Gerar token seguro
-	// - Salvar token no banco com expiração
-	// - Enviar email com link de reset
-
 	return nil
 }
 
-// ValidateEmail valida formato do email
 func (uc *UsuarioAdministradorUseCase) ValidateEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -221,7 +190,6 @@ func (uc *UsuarioAdministradorUseCase) ValidateEmail(email string) error {
 }
 
 func (uc *UsuarioAdministradorUseCase) Create(ctx context.Context, usuario *entity.UsuarioAdministrador, userAdminID int, enderecoIP string) error {
-	// Validações básicas
 	if usuario.IDEmpresa <= 0 {
 		return fmt.Errorf("ID da empresa é obrigatório")
 	}
@@ -234,33 +202,40 @@ func (uc *UsuarioAdministradorUseCase) Create(ctx context.Context, usuario *enti
 		return err
 	}
 	
-	if strings.TrimSpace(usuario.SenhaHash) == "" {
+	plainPassword := usuario.SenhaHash
+	if strings.TrimSpace(plainPassword) == "" {
 		return fmt.Errorf("senha é obrigatória")
 	}
 	
-	// Verifica se empresa existe
+	if len(plainPassword) < 8 {
+		return fmt.Errorf("senha deve ter pelo menos 8 caracteres")
+	}
+	
 	_, err := uc.empresaRepo.GetByID(ctx, usuario.IDEmpresa)
 	if err != nil {
 		return fmt.Errorf("empresa não encontrada: %v", err)
 	}
 	
-	// Verifica se email já existe
 	existingUser, err := uc.repo.GetByEmail(ctx, usuario.Email)
 	if err == nil && existingUser != nil {
 		return fmt.Errorf("email '%s' já está sendo usado", usuario.Email)
 	}
 	
-	// Define valores padrão
+	hashedPassword, err := uc.crypto.HashPassword(plainPassword)
+	if err != nil {
+		return fmt.Errorf("erro ao processar senha: %v", err)
+	}
+	usuario.SenhaHash = hashedPassword
+	
 	usuario.DataCadastro = time.Now()
 	if usuario.Status == "" {
 		usuario.Status = "Ativo"
 	}
 	
-	// Valida status
 	validStatuses := map[string]bool{
-		"Ativo":     true,
-		"Inativo":   true,
-		"Suspenso":  true,
+		"Ativo":    true,
+		"Inativo":  true,
+		"Suspenso": true,
 	}
 	
 	if !validStatuses[usuario.Status] {
@@ -271,14 +246,13 @@ func (uc *UsuarioAdministradorUseCase) Create(ctx context.Context, usuario *enti
 		return fmt.Errorf("erro ao criar usuário: %v", err)
 	}
 	
-	// Log de auditoria
 	if userAdminID > 0 {
 		log := &entity.LogAuditoria{
-			IDUserAdmin:    userAdminID,
-			TimeStamp:      time.Now(),
-			AcaoRealizada:  "Usuário Administrador Criado",
-			Detalhes:       fmt.Sprintf("Usuário criado: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
-			EnderecoIP:     enderecoIP,
+			IDUserAdmin:   userAdminID,
+			TimeStamp:     time.Now(),
+			AcaoRealizada: "Usuário Administrador Criado",
+			Detalhes:      fmt.Sprintf("Usuário criado: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
+			EnderecoIP:    enderecoIP,
 		}
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}
@@ -316,9 +290,9 @@ func (uc *UsuarioAdministradorUseCase) ListByStatus(ctx context.Context, empresa
 	}
 	
 	validStatuses := map[string]bool{
-		"Ativo":     true,
-		"Inativo":   true,
-		"Suspenso":  true,
+		"Ativo":    true,
+		"Inativo":  true,
+		"Suspenso": true,
 	}
 	
 	if !validStatuses[status] {
@@ -329,7 +303,6 @@ func (uc *UsuarioAdministradorUseCase) ListByStatus(ctx context.Context, empresa
 }
 
 func (uc *UsuarioAdministradorUseCase) Update(ctx context.Context, usuario *entity.UsuarioAdministrador, userAdminID int, enderecoIP string) error {
-	// Validações
 	if usuario.ID <= 0 {
 		return fmt.Errorf("ID do usuário inválido")
 	}
@@ -342,24 +315,21 @@ func (uc *UsuarioAdministradorUseCase) Update(ctx context.Context, usuario *enti
 		return err
 	}
 	
-	// Verifica se usuário existe
 	existing, err := uc.repo.GetByID(ctx, usuario.ID)
 	if err != nil {
 		return fmt.Errorf("usuário não encontrado: %v", err)
 	}
 	
-	// Verifica se email não está sendo usado por outro usuário
 	userComEmail, err := uc.repo.GetByEmail(ctx, usuario.Email)
 	if err == nil && userComEmail != nil && userComEmail.ID != usuario.ID {
 		return fmt.Errorf("email '%s' já está sendo usado por outro usuário", usuario.Email)
 	}
 	
-	// Valida status se informado
 	if usuario.Status != "" {
 		validStatuses := map[string]bool{
-			"Ativo":     true,
-			"Inativo":   true,
-			"Suspenso":  true,
+			"Ativo":    true,
+			"Inativo":  true,
+			"Suspenso": true,
 		}
 		
 		if !validStatuses[usuario.Status] {
@@ -371,14 +341,13 @@ func (uc *UsuarioAdministradorUseCase) Update(ctx context.Context, usuario *enti
 		return fmt.Errorf("erro ao atualizar usuário: %v", err)
 	}
 	
-	// Log de auditoria
 	if userAdminID > 0 {
 		log := &entity.LogAuditoria{
-			IDUserAdmin:    userAdminID,
-			TimeStamp:      time.Now(),
-			AcaoRealizada:  "Usuário Administrador Atualizado",
-			Detalhes:       fmt.Sprintf("Usuário atualizado: %s -> %s (ID: %d)", existing.NomeAdmin, usuario.NomeAdmin, usuario.ID),
-			EnderecoIP:     enderecoIP,
+			IDUserAdmin:   userAdminID,
+			TimeStamp:     time.Now(),
+			AcaoRealizada: "Usuário Administrador Atualizado",
+			Detalhes:      fmt.Sprintf("Usuário atualizado: %s -> %s (ID: %d)", existing.NomeAdmin, usuario.NomeAdmin, usuario.ID),
+			EnderecoIP:    enderecoIP,
 		}
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}
@@ -392,16 +361,15 @@ func (uc *UsuarioAdministradorUseCase) UpdateStatus(ctx context.Context, id int,
 	}
 	
 	validStatuses := map[string]bool{
-		"Ativo":     true,
-		"Inativo":   true,
-		"Suspenso":  true,
+		"Ativo":    true,
+		"Inativo":  true,
+		"Suspenso": true,
 	}
 	
 	if !validStatuses[status] {
 		return fmt.Errorf("status inválido: %s", status)
 	}
 	
-	// Verifica se usuário existe
 	usuario, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("usuário não encontrado: %v", err)
@@ -411,14 +379,13 @@ func (uc *UsuarioAdministradorUseCase) UpdateStatus(ctx context.Context, id int,
 		return fmt.Errorf("erro ao atualizar status: %v", err)
 	}
 	
-	// Log de auditoria
 	if userAdminID > 0 {
 		log := &entity.LogAuditoria{
-			IDUserAdmin:    userAdminID,
-			TimeStamp:      time.Now(),
-			AcaoRealizada:  "Status Usuário Alterado",
-			Detalhes:       fmt.Sprintf("Status alterado de '%s' para '%s' - Usuário: %s (ID: %d)", usuario.Status, status, usuario.NomeAdmin, usuario.ID),
-			EnderecoIP:     enderecoIP,
+			IDUserAdmin:   userAdminID,
+			TimeStamp:     time.Now(),
+			AcaoRealizada: "Status Usuário Alterado",
+			Detalhes:      fmt.Sprintf("Status alterado de '%s' para '%s' - Usuário: %s (ID: %d)", usuario.Status, status, usuario.NomeAdmin, usuario.ID),
+			EnderecoIP:    enderecoIP,
 		}
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}
@@ -431,7 +398,6 @@ func (uc *UsuarioAdministradorUseCase) Delete(ctx context.Context, id int, userA
 		return fmt.Errorf("ID do usuário inválido")
 	}
 	
-	// Busca usuário para log
 	usuario, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("usuário não encontrado: %v", err)
@@ -441,14 +407,13 @@ func (uc *UsuarioAdministradorUseCase) Delete(ctx context.Context, id int, userA
 		return fmt.Errorf("erro ao deletar usuário: %v", err)
 	}
 	
-	// Log de auditoria
 	if userAdminID > 0 {
 		log := &entity.LogAuditoria{
-			IDUserAdmin:    userAdminID,
-			TimeStamp:      time.Now(),
-			AcaoRealizada:  "Usuário Administrador Deletado",
-			Detalhes:       fmt.Sprintf("Usuário deletado: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
-			EnderecoIP:     enderecoIP,
+			IDUserAdmin:   userAdminID,
+			TimeStamp:     time.Now(),
+			AcaoRealizada: "Usuário Administrador Deletado",
+			Detalhes:      fmt.Sprintf("Usuário deletado: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
+			EnderecoIP:    enderecoIP,
 		}
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}

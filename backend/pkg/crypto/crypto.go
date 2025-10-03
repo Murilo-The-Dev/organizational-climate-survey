@@ -127,26 +127,3 @@ func SecureCompareBytes(a, b []byte) bool {
 	return subtle.ConstantTimeCompare(a, b) == 1
 }
 
-// Legacy functions for backward compatibility (deprecated)
-// These functions use default settings and are maintained for existing code
-
-// HashPassword generates a password hash using default bcrypt cost
-// Deprecated: Use NewDefaultCryptoService().HashPassword() for better testability
-func HashPassword(password string) (string, error) {
-	service := NewDefaultCryptoService()
-	return service.HashPassword(password)
-}
-
-// CheckPasswordHash verifies a password using default settings
-// Deprecated: Use NewDefaultCryptoService().CheckPasswordHash() for better testability
-func CheckPasswordHash(password, hash string) bool {
-	service := NewDefaultCryptoService()
-	return service.CheckPasswordHash(password, hash)
-}
-
-// GenerateRandomBytes generates random bytes using default settings
-// Deprecated: Use NewDefaultCryptoService().GenerateRandomBytes() for better testability
-func GenerateRandomBytes(n int) ([]byte, error) {
-	service := NewDefaultCryptoService()
-	return service.GenerateRandomBytes(n)
-}
