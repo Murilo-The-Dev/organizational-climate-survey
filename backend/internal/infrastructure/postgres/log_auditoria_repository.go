@@ -1,3 +1,4 @@
+// log_auditoria_repository.go
 package postgres
 
 import (
@@ -6,14 +7,19 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type LogAuditoriaRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
 func NewLogAuditoriaRepository(db *DB) *LogAuditoriaRepository {
-    return &LogAuditoriaRepository{db: db}
+    return &LogAuditoriaRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
 var _ repository.LogAuditoriaRepository = (*LogAuditoriaRepository)(nil)
@@ -34,6 +40,7 @@ func (r *LogAuditoriaRepository) Create(ctx context.Context, log *entity.LogAudi
     ).Scan(&log.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar log auditoria: %v", err)
         return fmt.Errorf("erro ao criar log de auditoria: %v", err)
     }
     
@@ -61,6 +68,7 @@ func (r *LogAuditoriaRepository) GetByID(ctx context.Context, id int) (*entity.L
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("log de auditoria com ID %d não encontrado", id)
         }
+        r.logger.Error("erro ao buscar log auditoria ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar log de auditoria: %v", err)
     }
     
@@ -79,6 +87,7 @@ func (r *LogAuditoriaRepository) ListByEmpresa(ctx context.Context, empresaID in
     
     rows, err := r.db.QueryContext(ctx, query, empresaID, limit, offset)
     if err != nil {
+        r.logger.Error("erro ao listar logs empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar logs de auditoria: %v", err)
     }
     defer rows.Close()
@@ -96,6 +105,7 @@ func (r *LogAuditoriaRepository) ListByEmpresa(ctx context.Context, empresaID in
             &log.EnderecoIP,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear log auditoria: %v", err)
             return nil, fmt.Errorf("erro ao escanear log de auditoria: %v", err)
         }
         logs = append(logs, log)
@@ -115,6 +125,7 @@ func (r *LogAuditoriaRepository) ListByUsuarioAdmin(ctx context.Context, userAdm
     
     rows, err := r.db.QueryContext(ctx, query, userAdminID, limit, offset)
     if err != nil {
+        r.logger.Error("erro ao listar logs usuário ID=%d: %v", userAdminID, err)
         return nil, fmt.Errorf("erro ao listar logs por usuário: %v", err)
     }
     defer rows.Close()
@@ -132,6 +143,7 @@ func (r *LogAuditoriaRepository) ListByUsuarioAdmin(ctx context.Context, userAdm
             &log.EnderecoIP,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear log auditoria: %v", err)
             return nil, fmt.Errorf("erro ao escanear log de auditoria: %v", err)
         }
         logs = append(logs, log)
@@ -153,6 +165,7 @@ func (r *LogAuditoriaRepository) ListByDateRange(ctx context.Context, empresaID 
     
     rows, err := r.db.QueryContext(ctx, query, empresaID, startDate, endDate)
     if err != nil {
+        r.logger.Error("erro ao listar logs por período empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar logs por período: %v", err)
     }
     defer rows.Close()
@@ -170,6 +183,7 @@ func (r *LogAuditoriaRepository) ListByDateRange(ctx context.Context, empresaID 
             &log.EnderecoIP,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear log auditoria: %v", err)
             return nil, fmt.Errorf("erro ao escanear log de auditoria: %v", err)
         }
         logs = append(logs, log)

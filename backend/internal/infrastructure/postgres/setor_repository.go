@@ -1,3 +1,4 @@
+// setor_repository.go
 package postgres
 
 import (
@@ -6,14 +7,19 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type SetorRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
 func NewSetorRepository(db *DB) *SetorRepository {
-    return &SetorRepository{db: db}
+    return &SetorRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
 var _ repository.SetorRepository = (*SetorRepository)(nil)
@@ -32,6 +38,7 @@ func (r *SetorRepository) Create(ctx context.Context, setor *entity.Setor) error
     ).Scan(&setor.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar setor nome=%s: %v", setor.NomeSetor, err)
         return fmt.Errorf("erro ao criar setor: %v", err)
     }
     
@@ -57,6 +64,7 @@ func (r *SetorRepository) GetByID(ctx context.Context, id int) (*entity.Setor, e
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("setor com ID %d não encontrado", id)
         }
+        r.logger.Error("erro ao buscar setor ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar setor: %v", err)
     }
     
@@ -82,6 +90,7 @@ func (r *SetorRepository) GetByNome(ctx context.Context, empresaID int, nome str
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("setor %s não encontrado na empresa ID %d", nome, empresaID)
         }
+        r.logger.Error("erro ao buscar setor nome=%s empresa ID=%d: %v", nome, empresaID, err)
         return nil, fmt.Errorf("erro ao buscar setor: %v", err)
     }
     
@@ -98,6 +107,7 @@ func (r *SetorRepository) ListByEmpresa(ctx context.Context, empresaID int) ([]*
     
     rows, err := r.db.QueryContext(ctx, query, empresaID)
     if err != nil {
+        r.logger.Error("erro ao listar setores empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar setores: %v", err)
     }
     defer rows.Close()
@@ -113,6 +123,7 @@ func (r *SetorRepository) ListByEmpresa(ctx context.Context, empresaID int) ([]*
             &setor.Descricao,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear setor: %v", err)
             return nil, fmt.Errorf("erro ao escanear setor: %v", err)
         }
         setores = append(setores, setor)
@@ -135,6 +146,7 @@ func (r *SetorRepository) Update(ctx context.Context, setor *entity.Setor) error
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar setor ID=%d: %v", setor.ID, err)
         return fmt.Errorf("erro ao atualizar setor: %v", err)
     }
     
@@ -151,11 +163,11 @@ func (r *SetorRepository) Update(ctx context.Context, setor *entity.Setor) error
 }
 
 func (r *SetorRepository) Delete(ctx context.Context, id int) error {
-    // Verifica se há pesquisas vinculadas
     var count int
     checkQuery := `SELECT COUNT(*) FROM pesquisa WHERE id_setor = $1`
     err := r.db.QueryRowContext(ctx, checkQuery, id).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao verificar dependências setor ID=%d: %v", id, err)
         return fmt.Errorf("erro ao verificar dependências: %v", err)
     }
     
@@ -166,6 +178,7 @@ func (r *SetorRepository) Delete(ctx context.Context, id int) error {
     query := `DELETE FROM setor WHERE id_setor = $1`
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar setor ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar setor: %v", err)
     }
     

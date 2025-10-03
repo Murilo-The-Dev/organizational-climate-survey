@@ -1,3 +1,4 @@
+// dashboard_repository.go
 package postgres
 
 import (
@@ -6,14 +7,19 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type DashboardRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
 func NewDashboardRepository(db *DB) *DashboardRepository {
-    return &DashboardRepository{db: db}
+    return &DashboardRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
 var _ repository.DashboardRepository = (*DashboardRepository)(nil)
@@ -33,6 +39,7 @@ func (r *DashboardRepository) Create(ctx context.Context, dashboard *entity.Dash
     ).Scan(&dashboard.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar dashboard pesquisa ID=%d: %v", dashboard.IDPesquisa, err)
         return fmt.Errorf("erro ao criar dashboard: %v", err)
     }
     
@@ -59,6 +66,7 @@ func (r *DashboardRepository) GetByID(ctx context.Context, id int) (*entity.Dash
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("dashboard com ID %d não encontrado", id)
         }
+        r.logger.Error("erro ao buscar dashboard ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar dashboard: %v", err)
     }
     
@@ -85,6 +93,7 @@ func (r *DashboardRepository) GetByPesquisaID(ctx context.Context, pesquisaID in
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("dashboard para pesquisa ID %d não encontrado", pesquisaID)
         }
+        r.logger.Error("erro ao buscar dashboard pesquisa ID=%d: %v", pesquisaID, err)
         return nil, fmt.Errorf("erro ao buscar dashboard: %v", err)
     }
     
@@ -102,6 +111,7 @@ func (r *DashboardRepository) ListByEmpresa(ctx context.Context, empresaID int) 
     
     rows, err := r.db.QueryContext(ctx, query, empresaID)
     if err != nil {
+        r.logger.Error("erro ao listar dashboards empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar dashboards: %v", err)
     }
     defer rows.Close()
@@ -118,6 +128,7 @@ func (r *DashboardRepository) ListByEmpresa(ctx context.Context, empresaID int) 
             &dashboard.ConfigFiltros,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear dashboard: %v", err)
             return nil, fmt.Errorf("erro ao escanear dashboard: %v", err)
         }
         dashboards = append(dashboards, dashboard)
@@ -140,6 +151,7 @@ func (r *DashboardRepository) Update(ctx context.Context, dashboard *entity.Dash
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar dashboard ID=%d: %v", dashboard.ID, err)
         return fmt.Errorf("erro ao atualizar dashboard: %v", err)
     }
     
@@ -159,6 +171,7 @@ func (r *DashboardRepository) Delete(ctx context.Context, id int) error {
     query := `DELETE FROM dashboard WHERE id_dashboard = $1`
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar dashboard ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar dashboard: %v", err)
     }
     

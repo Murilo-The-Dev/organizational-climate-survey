@@ -3,16 +3,15 @@ package postgres
 import (
     "database/sql"
     "fmt"
-    "log"
-    _ "github.com/lib/pq" // Driver PostgreSQL
+    "organizational-climate-survey/backend/pkg/logger"
+    _ "github.com/lib/pq"
 )
 
-// DB representa a conexão com o banco de dados
 type DB struct {
     *sql.DB
+    logger logger.Logger
 }
 
-// Config contém as configurações para conexão com o banco de dados
 type Config struct {
     Host     string
     Port     string
@@ -22,7 +21,6 @@ type Config struct {
     SSLMode  string
 }
 
-// NewDB cria uma nova conexão com PostgreSQL
 func NewDB(host, port, user, password, dbname string) (*DB, error) {
     psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
         host, port, user, password, dbname)
@@ -32,22 +30,20 @@ func NewDB(host, port, user, password, dbname string) (*DB, error) {
         return nil, fmt.Errorf("erro ao conectar com o banco: %v", err)
     }
     
-    // Testa a conexão
     if err = db.Ping(); err != nil {
         return nil, fmt.Errorf("erro ao fazer ping no banco: %v", err)
     }
     
-    log.Println("Conectado ao PostgreSQL com sucesso!")
+    log := logger.New(nil)
+    log.Info("Conectado ao PostgreSQL")
     
-    return &DB{db}, nil
+    return &DB{DB: db, logger: log}, nil
 }
 
-// Close fecha a conexão com o banco
 func (db *DB) Close() error {
     return db.DB.Close()
 }
 
-// Repositories struct agrupa todos os repositórios
 type Repositories struct {
     Empresa             *EmpresaRepository
     UsuarioAdministrador *UsuarioAdministradorRepository
@@ -59,7 +55,6 @@ type Repositories struct {
     LogAuditoria        *LogAuditoriaRepository
 }
 
-// NewRepositories cria todas as instâncias dos repositórios
 func NewRepositories(db *DB) *Repositories {
     return &Repositories{
         Empresa:             NewEmpresaRepository(db),

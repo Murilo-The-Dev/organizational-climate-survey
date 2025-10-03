@@ -1,3 +1,4 @@
+// empresa_repository.go
 package postgres
 
 import (
@@ -6,21 +7,23 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type EmpresaRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
-// NewEmpresaRepository cria uma nova instância do repositório de empresa
 func NewEmpresaRepository(db *DB) *EmpresaRepository {
-    return &EmpresaRepository{db: db}
+    return &EmpresaRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
-// Verifica se implementa a interface
 var _ repository.EmpresaRepository = (*EmpresaRepository)(nil)
 
-// Create insere uma nova empresa no banco de dados
 func (r *EmpresaRepository) Create(ctx context.Context, empresa *entity.Empresa) error {
     query := `
         INSERT INTO empresa (nome_fantasia, razao_social, cnpj, data_cadastro)
@@ -36,13 +39,13 @@ func (r *EmpresaRepository) Create(ctx context.Context, empresa *entity.Empresa)
     ).Scan(&empresa.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar empresa CNPJ=%s: %v", empresa.CNPJ, err)
         return fmt.Errorf("erro ao criar empresa: %v", err)
     }
     
     return nil
 }
 
-// GetByID busca uma empresa por ID
 func (r *EmpresaRepository) GetByID(ctx context.Context, id int) (*entity.Empresa, error) {
     empresa := &entity.Empresa{}
     query := `
@@ -63,13 +66,13 @@ func (r *EmpresaRepository) GetByID(ctx context.Context, id int) (*entity.Empres
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("empresa com ID %d não encontrada", id)
         }
+        r.logger.Error("erro ao buscar empresa ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar empresa: %v", err)
     }
     
     return empresa, nil
 }
 
-// GetByCNPJ busca uma empresa por CNPJ
 func (r *EmpresaRepository) GetByCNPJ(ctx context.Context, cnpj string) (*entity.Empresa, error) {
     empresa := &entity.Empresa{}
     query := `
@@ -90,13 +93,13 @@ func (r *EmpresaRepository) GetByCNPJ(ctx context.Context, cnpj string) (*entity
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("empresa com CNPJ %s não encontrada", cnpj)
         }
+        r.logger.Error("erro ao buscar empresa CNPJ=%s: %v", cnpj, err)
         return nil, fmt.Errorf("erro ao buscar empresa: %v", err)
     }
     
     return empresa, nil
 }
 
-// List retorna uma lista paginada de empresas
 func (r *EmpresaRepository) List(ctx context.Context, limit, offset int) ([]*entity.Empresa, error) {
     query := `
         SELECT id_empresa, nome_fantasia, razao_social, cnpj, data_cadastro
@@ -107,6 +110,7 @@ func (r *EmpresaRepository) List(ctx context.Context, limit, offset int) ([]*ent
     
     rows, err := r.db.QueryContext(ctx, query, limit, offset)
     if err != nil {
+        r.logger.Error("erro ao listar empresas: %v", err)
         return nil, fmt.Errorf("erro ao listar empresas: %v", err)
     }
     defer rows.Close()
@@ -123,19 +127,20 @@ func (r *EmpresaRepository) List(ctx context.Context, limit, offset int) ([]*ent
             &empresa.DataCadastro,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear empresa: %v", err)
             return nil, fmt.Errorf("erro ao escanear empresa: %v", err)
         }
         empresas = append(empresas, empresa)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar empresas: %v", err)
         return nil, fmt.Errorf("erro ao iterar empresas: %v", err)
     }
     
     return empresas, nil
 }
 
-// Update atualiza uma empresa existente
 func (r *EmpresaRepository) Update(ctx context.Context, empresa *entity.Empresa) error {
     query := `
         UPDATE empresa 
@@ -151,6 +156,7 @@ func (r *EmpresaRepository) Update(ctx context.Context, empresa *entity.Empresa)
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar empresa ID=%d: %v", empresa.ID, err)
         return fmt.Errorf("erro ao atualizar empresa: %v", err)
     }
     
@@ -166,15 +172,12 @@ func (r *EmpresaRepository) Update(ctx context.Context, empresa *entity.Empresa)
     return nil
 }
 
-// Delete remove uma empresa (soft delete poderia ser implementado)
 func (r *EmpresaRepository) Delete(ctx context.Context, id int) error {
-    // Primeiro verificamos se a empresa tem dependências
     var count int
-    checkQuery := `
-        SELECT COUNT(*) FROM usuario_administrador WHERE id_empresa = $1
-    `
+    checkQuery := `SELECT COUNT(*) FROM usuario_administrador WHERE id_empresa = $1`
     err := r.db.QueryRowContext(ctx, checkQuery, id).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao verificar dependências empresa ID=%d: %v", id, err)
         return fmt.Errorf("erro ao verificar dependências: %v", err)
     }
     
@@ -182,11 +185,10 @@ func (r *EmpresaRepository) Delete(ctx context.Context, id int) error {
         return fmt.Errorf("não é possível deletar empresa: possui %d usuários administradores vinculados", count)
     }
     
-    // Se não há dependências, deleta a empresa
     query := `DELETE FROM empresa WHERE id_empresa = $1`
-    
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar empresa ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar empresa: %v", err)
     }
     
