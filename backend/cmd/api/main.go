@@ -9,18 +9,17 @@ import (
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/infrastructure/postgres"
 	httpRouter "organizational-climate-survey/backend/internal/infrastructure/http"
+	"organizational-climate-survey/backend/pkg/crypto"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Carregar variáveis de ambiente do arquivo .env
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Aviso: Não foi possível encontrar o arquivo .env, usando variáveis de ambiente do sistema.")
 	}
 
-	// Configurações do servidor
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "8080"
@@ -31,7 +30,6 @@ func main() {
 		log.Fatal("JWT_SECRET não configurado nas variáveis de ambiente")
 	}
 
-	// Configuração do banco de dados
 	dbConfig := &postgres.Config{
 		Host:     getEnvWithDefault("DB_HOST", "localhost"),
 		Port:     getEnvWithDefault("DB_PORT", "5432"),
@@ -41,12 +39,10 @@ func main() {
 		SSLMode:  getEnvWithDefault("DB_SSLMODE", "disable"),
 	}
 
-	// Validar configurações obrigatórias
 	if dbConfig.Password == "" {
 		log.Fatal("DB_PASS não configurado nas variáveis de ambiente")
 	}
 
-	// Conectar ao banco de dados
 	db, err := postgres.NewDB(dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName)
 	if err != nil {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
@@ -55,12 +51,13 @@ func main() {
 
 	log.Println("✅ Conexão com banco de dados estabelecida")
 
-	// Criar todos os repositórios usando a função helper
 	repos := postgres.NewRepositories(db)
-
 	log.Println("✅ Repositórios inicializados")
 
-	// Criar use cases usando apenas os repositórios necessários conforme implementados
+	// Inicializar crypto service
+	cryptoSvc := crypto.NewDefaultCryptoService()
+	log.Println("✅ Crypto service inicializado")
+
 	var empresaUseCase *usecase.EmpresaUseCase
 	if repos.Empresa != nil && repos.LogAuditoria != nil {
 		empresaUseCase = usecase.NewEmpresaUseCase(repos.Empresa, repos.LogAuditoria)
@@ -68,7 +65,12 @@ func main() {
 
 	var usuarioUseCase *usecase.UsuarioAdministradorUseCase  
 	if repos.UsuarioAdministrador != nil && repos.Empresa != nil && repos.LogAuditoria != nil {
-		usuarioUseCase = usecase.NewUsuarioAdministradorUseCase(repos.UsuarioAdministrador, repos.Empresa, repos.LogAuditoria)
+		usuarioUseCase = usecase.NewUsuarioAdministradorUseCase(
+			repos.UsuarioAdministrador, 
+			repos.Empresa, 
+			repos.LogAuditoria,
+			cryptoSvc,
+		)
 	}
 
 	var setorUseCase *usecase.SetorUseCase
@@ -103,7 +105,6 @@ func main() {
 
 	log.Println("✅ Use cases inicializados")
 
-	// Configurar roteador
 	routerConfig := &httpRouter.RouterConfig{
 		EmpresaUseCase:              empresaUseCase,
 		UsuarioAdministradorUseCase: usuarioUseCase,
@@ -117,16 +118,13 @@ func main() {
 	}
 
 	router := httpRouter.SetupRouter(routerConfig)
-	
 	log.Println("✅ Router configurado")
 
-	// Configurar servidor
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
 	}
 
-	// Informações de inicialização
 	appName := getEnvWithDefault("APP_NAME", "organizational-climate-survey")
 	appEnv := getEnvWithDefault("APP_ENV", "development")
 	
@@ -138,11 +136,9 @@ func main() {
 		fmt.Printf("📚 Documentação: http://localhost:%s/docs/\n", port)
 	}
 
-	// Iniciar servidor
 	log.Fatal(server.ListenAndServe())
 }
 
-// Função auxiliar para obter variável de ambiente com valor padrão
 func getEnvWithDefault(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

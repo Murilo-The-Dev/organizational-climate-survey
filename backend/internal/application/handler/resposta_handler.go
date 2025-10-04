@@ -7,74 +7,61 @@ import (
 	"strconv"
 	"strings"
 
-	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 )
 
 type RespostaHandler struct {
 	respostaUseCase *usecase.RespostaUseCase
+	log             logger.Logger
 }
 
-func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase) *RespostaHandler {
+func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase, log logger.Logger) *RespostaHandler {
 	return &RespostaHandler{
 		respostaUseCase: respostaUseCase,
+		log:             log,
 	}
 }
 
-// SubmitRespostas godoc
-// @Summary Submeter respostas de uma pesquisa
-// @Description Submete todas as respostas de um formulário de pesquisa de forma anônima
-// @Tags respostas
-// @Accept json
-// @Produce json
-// @Param respostas body []dto.RespostaCreateRequest true "Lista de respostas"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /respostas/submit [post]
 func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request) {
 	var reqs []dto.RespostaCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
 	if len(reqs) == 0 {
+		h.log.WithContext(r.Context()).Info("Nenhuma resposta enviada")
 		response.WriteError(w, http.StatusBadRequest, "Lista vazia", "Pelo menos uma resposta deve ser fornecida")
 		return
 	}
-
-	if len(reqs) > 100 {
-		response.WriteError(w, http.StatusBadRequest, "Muitas respostas", "Máximo de 100 respostas por submissão")
-		return
-	}
-
-	// Validar todas as respostas
 	respostas := make([]*entity.Resposta, len(reqs))
 	for i, req := range reqs {
 		if err := h.validateRespostaCreateRequest(&req); err != nil {
-			response.WriteError(w, http.StatusBadRequest, fmt.Sprintf("Validação falhou na resposta %d", i+1), err.Error())
+			h.log.WithContext(r.Context()).Info("Validação falhou na resposta %d: %v", i+1, err)
+			response.WriteError(w, http.StatusBadRequest, fmt.Sprintf("Erro na resposta %d", i+1), err.Error())
 			return
 		}
 		respostas[i] = req.ToEntity()
 	}
-
 	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas); err != nil {
+		h.log.WithContext(r.Context()).Error("Erro ao salvar respostas: %v", err)
 		if strings.Contains(err.Error(), "pesquisa não está ativa") {
-			response.WriteError(w, http.StatusBadRequest, "Pesquisa indisponível", err.Error())
+			response.WriteError(w, http.StatusBadRequest, "Pesquisa inativa", err.Error())
 			return
 		}
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
+	h.log.WithContext(r.Context()).Info("Respostas submetidas com sucesso: %d", len(respostas))
 	response.WriteSuccess(w, http.StatusCreated, "Respostas submetidas com sucesso", nil)
 }
+
 
 // GetRespostaStats godoc
 // @Summary Obter estatísticas de respostas

@@ -1,3 +1,4 @@
+// pesquisa_repository.go
 package postgres
 
 import (
@@ -6,21 +7,23 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type PesquisaRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
-// NewPesquisaRepository cria uma nova instância do repositório de pesquisa
 func NewPesquisaRepository(db *DB) *PesquisaRepository {
-    return &PesquisaRepository{db: db}
+    return &PesquisaRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
-// Verifica se implementa a interface
 var _ repository.PesquisaRepository = (*PesquisaRepository)(nil)
 
-// Create insere uma nova pesquisa
 func (r *PesquisaRepository) Create(ctx context.Context, pesquisa *entity.Pesquisa) error {
     query := `
         INSERT INTO pesquisa (id_empresa, id_user_admin, id_setor, titulo, descricao, 
@@ -47,13 +50,13 @@ func (r *PesquisaRepository) Create(ctx context.Context, pesquisa *entity.Pesqui
     ).Scan(&pesquisa.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar pesquisa titulo=%s: %v", pesquisa.Titulo, err)
         return fmt.Errorf("erro ao criar pesquisa: %v", err)
     }
     
     return nil
 }
 
-// GetByID busca uma pesquisa por ID
 func (r *PesquisaRepository) GetByID(ctx context.Context, id int) (*entity.Pesquisa, error) {
     pesquisa := &entity.Pesquisa{}
     query := `
@@ -85,13 +88,13 @@ func (r *PesquisaRepository) GetByID(ctx context.Context, id int) (*entity.Pesqu
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("pesquisa com ID %d não encontrada", id)
         }
+        r.logger.Error("erro ao buscar pesquisa ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar pesquisa: %v", err)
     }
     
     return pesquisa, nil
 }
 
-// GetByLinkAcesso busca uma pesquisa pelo link de acesso (para respondentes)
 func (r *PesquisaRepository) GetByLinkAcesso(ctx context.Context, link string) (*entity.Pesquisa, error) {
     pesquisa := &entity.Pesquisa{}
     query := `
@@ -123,13 +126,13 @@ func (r *PesquisaRepository) GetByLinkAcesso(ctx context.Context, link string) (
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("pesquisa com link %s não encontrada", link)
         }
+        r.logger.Error("erro ao buscar pesquisa por link: %v", err)
         return nil, fmt.Errorf("erro ao buscar pesquisa: %v", err)
     }
     
     return pesquisa, nil
 }
 
-// ListByEmpresa retorna todas as pesquisas de uma empresa
 func (r *PesquisaRepository) ListByEmpresa(ctx context.Context, empresaID int) ([]*entity.Pesquisa, error) {
     query := `
         SELECT id_pesquisa, id_empresa, id_user_admin, id_setor, titulo, descricao,
@@ -142,6 +145,7 @@ func (r *PesquisaRepository) ListByEmpresa(ctx context.Context, empresaID int) (
     
     rows, err := r.db.QueryContext(ctx, query, empresaID)
     if err != nil {
+        r.logger.Error("erro ao listar pesquisas empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar pesquisas: %v", err)
     }
     defer rows.Close()
@@ -167,19 +171,20 @@ func (r *PesquisaRepository) ListByEmpresa(ctx context.Context, empresaID int) (
             &pesquisa.Anonimato,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear pesquisa: %v", err)
             return nil, fmt.Errorf("erro ao escanear pesquisa: %v", err)
         }
         pesquisas = append(pesquisas, pesquisa)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar pesquisas: %v", err)
         return nil, fmt.Errorf("erro ao iterar pesquisas: %v", err)
     }
     
     return pesquisas, nil
 }
 
-// ListBySetor retorna pesquisas de um setor específico
 func (r *PesquisaRepository) ListBySetor(ctx context.Context, setorID int) ([]*entity.Pesquisa, error) {
     query := `
         SELECT id_pesquisa, id_empresa, id_user_admin, id_setor, titulo, descricao,
@@ -192,6 +197,7 @@ func (r *PesquisaRepository) ListBySetor(ctx context.Context, setorID int) ([]*e
     
     rows, err := r.db.QueryContext(ctx, query, setorID)
     if err != nil {
+        r.logger.Error("erro ao listar pesquisas setor ID=%d: %v", setorID, err)
         return nil, fmt.Errorf("erro ao listar pesquisas por setor: %v", err)
     }
     defer rows.Close()
@@ -217,19 +223,20 @@ func (r *PesquisaRepository) ListBySetor(ctx context.Context, setorID int) ([]*e
             &pesquisa.Anonimato,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear pesquisa: %v", err)
             return nil, fmt.Errorf("erro ao escanear pesquisa: %v", err)
         }
         pesquisas = append(pesquisas, pesquisa)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar pesquisas: %v", err)
         return nil, fmt.Errorf("erro ao iterar pesquisas: %v", err)
     }
     
     return pesquisas, nil
 }
 
-// ListByStatus retorna pesquisas por status
 func (r *PesquisaRepository) ListByStatus(ctx context.Context, empresaID int, status string) ([]*entity.Pesquisa, error) {
     query := `
         SELECT id_pesquisa, id_empresa, id_user_admin, id_setor, titulo, descricao,
@@ -242,6 +249,7 @@ func (r *PesquisaRepository) ListByStatus(ctx context.Context, empresaID int, st
     
     rows, err := r.db.QueryContext(ctx, query, empresaID, status)
     if err != nil {
+        r.logger.Error("erro ao listar pesquisas por status empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar pesquisas por status: %v", err)
     }
     defer rows.Close()
@@ -267,19 +275,20 @@ func (r *PesquisaRepository) ListByStatus(ctx context.Context, empresaID int, st
             &pesquisa.Anonimato,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear pesquisa: %v", err)
             return nil, fmt.Errorf("erro ao escanear pesquisa: %v", err)
         }
         pesquisas = append(pesquisas, pesquisa)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar pesquisas: %v", err)
         return nil, fmt.Errorf("erro ao iterar pesquisas: %v", err)
     }
     
     return pesquisas, nil
 }
 
-// ListActive retorna pesquisas ativas
 func (r *PesquisaRepository) ListActive(ctx context.Context, empresaID int) ([]*entity.Pesquisa, error) {
     query := `
         SELECT id_pesquisa, id_empresa, id_user_admin, id_setor, titulo, descricao,
@@ -294,6 +303,7 @@ func (r *PesquisaRepository) ListActive(ctx context.Context, empresaID int) ([]*
     
     rows, err := r.db.QueryContext(ctx, query, empresaID)
     if err != nil {
+        r.logger.Error("erro ao listar pesquisas ativas empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar pesquisas ativas: %v", err)
     }
     defer rows.Close()
@@ -319,19 +329,20 @@ func (r *PesquisaRepository) ListActive(ctx context.Context, empresaID int) ([]*
             &pesquisa.Anonimato,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear pesquisa: %v", err)
             return nil, fmt.Errorf("erro ao escanear pesquisa: %v", err)
         }
         pesquisas = append(pesquisas, pesquisa)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar pesquisas: %v", err)
         return nil, fmt.Errorf("erro ao iterar pesquisas: %v", err)
     }
     
     return pesquisas, nil
 }
 
-// Update atualiza uma pesquisa
 func (r *PesquisaRepository) Update(ctx context.Context, pesquisa *entity.Pesquisa) error {
     query := `
         UPDATE pesquisa 
@@ -351,6 +362,7 @@ func (r *PesquisaRepository) Update(ctx context.Context, pesquisa *entity.Pesqui
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar pesquisa ID=%d: %v", pesquisa.ID, err)
         return fmt.Errorf("erro ao atualizar pesquisa: %v", err)
     }
     
@@ -366,7 +378,6 @@ func (r *PesquisaRepository) Update(ctx context.Context, pesquisa *entity.Pesqui
     return nil
 }
 
-// UpdateStatus atualiza apenas o status de uma pesquisa
 func (r *PesquisaRepository) UpdateStatus(ctx context.Context, id int, status string) error {
     query := `
         UPDATE pesquisa 
@@ -376,6 +387,7 @@ func (r *PesquisaRepository) UpdateStatus(ctx context.Context, id int, status st
     
     result, err := r.db.ExecContext(ctx, query, id, status)
     if err != nil {
+        r.logger.Error("erro ao atualizar status pesquisa ID=%d: %v", id, err)
         return fmt.Errorf("erro ao atualizar status da pesquisa: %v", err)
     }
     
@@ -391,9 +403,7 @@ func (r *PesquisaRepository) UpdateStatus(ctx context.Context, id int, status st
     return nil
 }
 
-// Delete remove uma pesquisa
 func (r *PesquisaRepository) Delete(ctx context.Context, id int) error {
-    // Primeiro verificamos se há respostas vinculadas
     var count int
     checkQuery := `
         SELECT COUNT(*) 
@@ -403,19 +413,18 @@ func (r *PesquisaRepository) Delete(ctx context.Context, id int) error {
     `
     err := r.db.QueryRowContext(ctx, checkQuery, id).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao verificar dependências pesquisa ID=%d: %v", id, err)
         return fmt.Errorf("erro ao verificar dependências: %v", err)
     }
     
     if count > 0 {
-        // Em vez de deletar, arquiva a pesquisa
         return r.UpdateStatus(ctx, id, "Arquivada")
     }
     
-    // Se não há respostas, pode deletar
     query := `DELETE FROM pesquisa WHERE id_pesquisa = $1`
-    
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar pesquisa ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar pesquisa: %v", err)
     }
     

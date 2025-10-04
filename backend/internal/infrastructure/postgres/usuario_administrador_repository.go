@@ -1,3 +1,4 @@
+// usuario_administrador_repository.go
 package postgres
 
 import (
@@ -6,21 +7,23 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type UsuarioAdministradorRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
-// NewUsuarioAdministradorRepository cria uma nova instância do repositório
 func NewUsuarioAdministradorRepository(db *DB) *UsuarioAdministradorRepository {
-    return &UsuarioAdministradorRepository{db: db}
+    return &UsuarioAdministradorRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
-// Verifica se implementa a interface
 var _ repository.UsuarioAdministradorRepository = (*UsuarioAdministradorRepository)(nil)
 
-// Create insere um novo usuário administrador
 func (r *UsuarioAdministradorRepository) Create(ctx context.Context, usuario *entity.UsuarioAdministrador) error {
     query := `
         INSERT INTO usuario_administrador (id_empresa, nome_admin, email, senha_hash, data_cadastro, status)
@@ -38,13 +41,13 @@ func (r *UsuarioAdministradorRepository) Create(ctx context.Context, usuario *en
     ).Scan(&usuario.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar usuário admin email=%s: %v", usuario.Email, err)
         return fmt.Errorf("erro ao criar usuário administrador: %v", err)
     }
     
     return nil
 }
 
-// GetByID busca um usuário administrador por ID
 func (r *UsuarioAdministradorRepository) GetByID(ctx context.Context, id int) (*entity.UsuarioAdministrador, error) {
     usuario := &entity.UsuarioAdministrador{}
     query := `
@@ -67,19 +70,19 @@ func (r *UsuarioAdministradorRepository) GetByID(ctx context.Context, id int) (*
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("usuário administrador com ID %d não encontrado", id)
         }
+        r.logger.Error("erro ao buscar usuário admin ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar usuário administrador: %v", err)
     }
     
     return usuario, nil
 }
 
-// GetByEmail busca um usuário administrador por email (usado para login)
 func (r *UsuarioAdministradorRepository) GetByEmail(ctx context.Context, email string) (*entity.UsuarioAdministrador, error) {
     usuario := &entity.UsuarioAdministrador{}
     query := `
         SELECT id_user_admin, id_empresa, nome_admin, email, senha_hash, data_cadastro, status
         FROM usuario_administrador
-        WHERE email = $1 AND status = 'Ativo'
+        WHERE email = $1
     `
     
     err := r.db.QueryRowContext(ctx, query, email).Scan(
@@ -94,15 +97,15 @@ func (r *UsuarioAdministradorRepository) GetByEmail(ctx context.Context, email s
     
     if err != nil {
         if err == sql.ErrNoRows {
-            return nil, fmt.Errorf("usuário administrador com email %s não encontrado ou inativo", email)
+            return nil, fmt.Errorf("usuário administrador com email %s não encontrado", email)
         }
+        r.logger.Error("erro ao buscar usuário por email=%s: %v", email, err)
         return nil, fmt.Errorf("erro ao buscar usuário administrador: %v", err)
     }
     
     return usuario, nil
 }
 
-// ListByEmpresa retorna todos os usuários administradores de uma empresa
 func (r *UsuarioAdministradorRepository) ListByEmpresa(ctx context.Context, empresaID int) ([]*entity.UsuarioAdministrador, error) {
     query := `
         SELECT id_user_admin, id_empresa, nome_admin, email, senha_hash, data_cadastro, status
@@ -113,6 +116,7 @@ func (r *UsuarioAdministradorRepository) ListByEmpresa(ctx context.Context, empr
     
     rows, err := r.db.QueryContext(ctx, query, empresaID)
     if err != nil {
+        r.logger.Error("erro ao listar usuários empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar usuários administradores: %v", err)
     }
     defer rows.Close()
@@ -131,19 +135,20 @@ func (r *UsuarioAdministradorRepository) ListByEmpresa(ctx context.Context, empr
             &usuario.Status,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear usuário admin: %v", err)
             return nil, fmt.Errorf("erro ao escanear usuário administrador: %v", err)
         }
         usuarios = append(usuarios, usuario)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar usuários admin: %v", err)
         return nil, fmt.Errorf("erro ao iterar usuários administradores: %v", err)
     }
     
     return usuarios, nil
 }
 
-// ListByStatus retorna usuários administradores por status
 func (r *UsuarioAdministradorRepository) ListByStatus(ctx context.Context, empresaID int, status string) ([]*entity.UsuarioAdministrador, error) {
     query := `
         SELECT id_user_admin, id_empresa, nome_admin, email, senha_hash, data_cadastro, status
@@ -154,6 +159,7 @@ func (r *UsuarioAdministradorRepository) ListByStatus(ctx context.Context, empre
     
     rows, err := r.db.QueryContext(ctx, query, empresaID, status)
     if err != nil {
+        r.logger.Error("erro ao listar usuários por status empresa ID=%d: %v", empresaID, err)
         return nil, fmt.Errorf("erro ao listar usuários administradores por status: %v", err)
     }
     defer rows.Close()
@@ -172,19 +178,20 @@ func (r *UsuarioAdministradorRepository) ListByStatus(ctx context.Context, empre
             &usuario.Status,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear usuário admin: %v", err)
             return nil, fmt.Errorf("erro ao escanear usuário administrador: %v", err)
         }
         usuarios = append(usuarios, usuario)
     }
     
     if err = rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar usuários admin: %v", err)
         return nil, fmt.Errorf("erro ao iterar usuários administradores: %v", err)
     }
     
     return usuarios, nil
 }
 
-// Update atualiza um usuário administrador
 func (r *UsuarioAdministradorRepository) Update(ctx context.Context, usuario *entity.UsuarioAdministrador) error {
     query := `
         UPDATE usuario_administrador 
@@ -200,6 +207,7 @@ func (r *UsuarioAdministradorRepository) Update(ctx context.Context, usuario *en
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar usuário admin ID=%d: %v", usuario.ID, err)
         return fmt.Errorf("erro ao atualizar usuário administrador: %v", err)
     }
     
@@ -215,7 +223,6 @@ func (r *UsuarioAdministradorRepository) Update(ctx context.Context, usuario *en
     return nil
 }
 
-// UpdatePassword atualiza apenas a senha de um usuário
 func (r *UsuarioAdministradorRepository) UpdatePassword(ctx context.Context, id int, senhaHash string) error {
     query := `
         UPDATE usuario_administrador 
@@ -225,6 +232,7 @@ func (r *UsuarioAdministradorRepository) UpdatePassword(ctx context.Context, id 
     
     result, err := r.db.ExecContext(ctx, query, id, senhaHash)
     if err != nil {
+        r.logger.Error("erro ao atualizar senha usuário ID=%d: %v", id, err)
         return fmt.Errorf("erro ao atualizar senha: %v", err)
     }
     
@@ -240,7 +248,6 @@ func (r *UsuarioAdministradorRepository) UpdatePassword(ctx context.Context, id 
     return nil
 }
 
-// UpdateStatus atualiza apenas o status de um usuário
 func (r *UsuarioAdministradorRepository) UpdateStatus(ctx context.Context, id int, status string) error {
     query := `
         UPDATE usuario_administrador 
@@ -250,6 +257,7 @@ func (r *UsuarioAdministradorRepository) UpdateStatus(ctx context.Context, id in
     
     result, err := r.db.ExecContext(ctx, query, id, status)
     if err != nil {
+        r.logger.Error("erro ao atualizar status usuário ID=%d: %v", id, err)
         return fmt.Errorf("erro ao atualizar status: %v", err)
     }
     
@@ -265,26 +273,23 @@ func (r *UsuarioAdministradorRepository) UpdateStatus(ctx context.Context, id in
     return nil
 }
 
-// Delete remove um usuário administrador
 func (r *UsuarioAdministradorRepository) Delete(ctx context.Context, id int) error {
-    // Primeiro verificamos se o usuário tem dependências (pesquisas criadas)
     var count int
     checkQuery := `SELECT COUNT(*) FROM pesquisa WHERE id_user_admin = $1`
     err := r.db.QueryRowContext(ctx, checkQuery, id).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao verificar dependências usuário ID=%d: %v", id, err)
         return fmt.Errorf("erro ao verificar dependências: %v", err)
     }
     
     if count > 0 {
-        // Em vez de deletar, podemos inativar o usuário
         return r.UpdateStatus(ctx, id, "Inativo")
     }
     
-    // Se não há dependências, deleta o usuário
     query := `DELETE FROM usuario_administrador WHERE id_user_admin = $1`
-    
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar usuário admin ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar usuário administrador: %v", err)
     }
     

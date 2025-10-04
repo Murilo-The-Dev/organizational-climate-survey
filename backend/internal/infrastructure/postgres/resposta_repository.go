@@ -1,3 +1,4 @@
+// resposta_repository.go
 package postgres
 
 import (
@@ -5,14 +6,19 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type RespostaRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
 func NewRespostaRepository(db *DB) *RespostaRepository {
-    return &RespostaRepository{db: db}
+    return &RespostaRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
 var _ repository.RespostaRepository = (*RespostaRepository)(nil)
@@ -24,6 +30,7 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
     
     tx, err := r.db.BeginTx(ctx, nil)
     if err != nil {
+        r.logger.Error("erro ao iniciar transação batch respostas: %v", err)
         return fmt.Errorf("erro ao iniciar transação: %v", err)
     }
     defer tx.Rollback()
@@ -33,6 +40,7 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
         VALUES ($1, $2, $3, $4)
     `)
     if err != nil {
+        r.logger.Error("erro ao preparar statement batch respostas: %v", err)
         return fmt.Errorf("erro ao preparar statement: %v", err)
     }
     defer stmt.Close()
@@ -45,11 +53,17 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
             resposta.DataResposta,
         )
         if err != nil {
+            r.logger.Error("erro ao inserir resposta batch: %v", err)
             return fmt.Errorf("erro ao inserir resposta: %v", err)
         }
     }
     
-    return tx.Commit()
+    if err := tx.Commit(); err != nil {
+        r.logger.Error("erro ao commit batch respostas: %v", err)
+        return fmt.Errorf("erro ao commit: %v", err)
+    }
+    
+    return nil
 }
 
 func (r *RespostaRepository) CountByPesquisa(ctx context.Context, pesquisaID int) (int, error) {
@@ -58,6 +72,7 @@ func (r *RespostaRepository) CountByPesquisa(ctx context.Context, pesquisaID int
     
     err := r.db.QueryRowContext(ctx, query, pesquisaID).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao contar respostas pesquisa ID=%d: %v", pesquisaID, err)
         return 0, fmt.Errorf("erro ao contar respostas da pesquisa: %v", err)
     }
     
@@ -70,6 +85,7 @@ func (r *RespostaRepository) CountByPergunta(ctx context.Context, perguntaID int
     
     err := r.db.QueryRowContext(ctx, query, perguntaID).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao contar respostas pergunta ID=%d: %v", perguntaID, err)
         return 0, fmt.Errorf("erro ao contar respostas da pergunta: %v", err)
     }
     
@@ -87,6 +103,7 @@ func (r *RespostaRepository) GetAggregatedByPergunta(ctx context.Context, pergun
     
     rows, err := r.db.QueryContext(ctx, query, perguntaID)
     if err != nil {
+        r.logger.Error("erro ao buscar agregados pergunta ID=%d: %v", perguntaID, err)
         return nil, fmt.Errorf("erro ao buscar dados agregados: %v", err)
     }
     defer rows.Close()
@@ -99,6 +116,7 @@ func (r *RespostaRepository) GetAggregatedByPergunta(ctx context.Context, pergun
         
         err := rows.Scan(&valor, &quantidade)
         if err != nil {
+            r.logger.Error("erro ao escanear agregado: %v", err)
             return nil, fmt.Errorf("erro ao escanear resultado: %v", err)
         }
         
@@ -106,6 +124,7 @@ func (r *RespostaRepository) GetAggregatedByPergunta(ctx context.Context, pergun
     }
     
     if err := rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar agregados: %v", err)
         return nil, fmt.Errorf("erro durante iteração: %v", err)
     }
     
@@ -123,6 +142,7 @@ func (r *RespostaRepository) GetAggregatedByPesquisa(ctx context.Context, pesqui
     
     rows, err := r.db.QueryContext(ctx, query, pesquisaID)
     if err != nil {
+        r.logger.Error("erro ao buscar agregados pesquisa ID=%d: %v", pesquisaID, err)
         return nil, fmt.Errorf("erro ao buscar dados agregados por pesquisa: %v", err)
     }
     defer rows.Close()
@@ -136,6 +156,7 @@ func (r *RespostaRepository) GetAggregatedByPesquisa(ctx context.Context, pesqui
         
         err := rows.Scan(&perguntaID, &valor, &quantidade)
         if err != nil {
+            r.logger.Error("erro ao escanear agregado pesquisa: %v", err)
             return nil, fmt.Errorf("erro ao escanear resultado: %v", err)
         }
         
@@ -147,6 +168,7 @@ func (r *RespostaRepository) GetAggregatedByPesquisa(ctx context.Context, pesqui
     }
     
     if err := rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar agregados pesquisa: %v", err)
         return nil, fmt.Errorf("erro durante iteração: %v", err)
     }
     
@@ -164,6 +186,7 @@ func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesqui
     
     rows, err := r.db.QueryContext(ctx, query, pesquisaID, startDate, endDate)
     if err != nil {
+        r.logger.Error("erro ao buscar respostas por período pesquisa ID=%d: %v", pesquisaID, err)
         return nil, fmt.Errorf("erro ao buscar respostas por período: %v", err)
     }
     defer rows.Close()
@@ -181,6 +204,7 @@ func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesqui
             &resposta.DataSubmissao,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear resposta: %v", err)
             return nil, fmt.Errorf("erro ao escanear resposta: %v", err)
         }
         
@@ -188,6 +212,7 @@ func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesqui
     }
     
     if err := rows.Err(); err != nil {
+        r.logger.Error("erro ao iterar respostas: %v", err)
         return nil, fmt.Errorf("erro durante iteração: %v", err)
     }
     
@@ -199,6 +224,7 @@ func (r *RespostaRepository) DeleteByPesquisa(ctx context.Context, pesquisaID in
     
     result, err := r.db.ExecContext(ctx, query, pesquisaID)
     if err != nil {
+        r.logger.Error("erro ao deletar respostas pesquisa ID=%d: %v", pesquisaID, err)
         return fmt.Errorf("erro ao deletar respostas: %v", err)
     }
     
@@ -207,8 +233,7 @@ func (r *RespostaRepository) DeleteByPesquisa(ctx context.Context, pesquisaID in
         return fmt.Errorf("erro ao verificar linhas afetadas: %v", err)
     }
     
-    // Log para auditoria - pode adicionar se necessário
-    _ = rowsAffected
+    r.logger.Info("respostas deletadas pesquisa ID=%d count=%d", pesquisaID, rowsAffected)
     
     return nil
 }

@@ -1,3 +1,4 @@
+// pergunta_repository.go
 package postgres
 
 import (
@@ -6,14 +7,19 @@ import (
     "fmt"
     "organizational-climate-survey/backend/internal/domain/entity"
     "organizational-climate-survey/backend/internal/domain/repository"
+    "organizational-climate-survey/backend/pkg/logger"
 )
 
 type PerguntaRepository struct {
-    db *DB
+    db     *DB
+    logger logger.Logger
 }
 
 func NewPerguntaRepository(db *DB) *PerguntaRepository {
-    return &PerguntaRepository{db: db}
+    return &PerguntaRepository{
+        db:     db,
+        logger: db.logger,
+    }
 }
 
 var _ repository.PerguntaRepository = (*PerguntaRepository)(nil)
@@ -34,6 +40,7 @@ func (r *PerguntaRepository) Create(ctx context.Context, pergunta *entity.Pergun
     ).Scan(&pergunta.ID)
     
     if err != nil {
+        r.logger.Error("erro ao criar pergunta pesquisa ID=%d: %v", pergunta.IDPesquisa, err)
         return fmt.Errorf("erro ao criar pergunta: %v", err)
     }
     
@@ -47,6 +54,7 @@ func (r *PerguntaRepository) CreateBatch(ctx context.Context, perguntas []*entit
     
     tx, err := r.db.BeginTx(ctx, nil)
     if err != nil {
+        r.logger.Error("erro ao iniciar transação batch perguntas: %v", err)
         return fmt.Errorf("erro ao iniciar transação: %v", err)
     }
     defer tx.Rollback()
@@ -57,6 +65,7 @@ func (r *PerguntaRepository) CreateBatch(ctx context.Context, perguntas []*entit
         RETURNING id_pergunta
     `)
     if err != nil {
+        r.logger.Error("erro ao preparar statement batch perguntas: %v", err)
         return fmt.Errorf("erro ao preparar statement: %v", err)
     }
     defer stmt.Close()
@@ -71,11 +80,17 @@ func (r *PerguntaRepository) CreateBatch(ctx context.Context, perguntas []*entit
         ).Scan(&pergunta.ID)
         
         if err != nil {
+            r.logger.Error("erro ao inserir pergunta batch: %v", err)
             return fmt.Errorf("erro ao inserir pergunta: %v", err)
         }
     }
     
-    return tx.Commit()
+    if err := tx.Commit(); err != nil {
+        r.logger.Error("erro ao commit batch perguntas: %v", err)
+        return fmt.Errorf("erro ao commit: %v", err)
+    }
+    
+    return nil
 }
 
 func (r *PerguntaRepository) GetByID(ctx context.Context, id int) (*entity.Pergunta, error) {
@@ -99,13 +114,13 @@ func (r *PerguntaRepository) GetByID(ctx context.Context, id int) (*entity.Pergu
         if err == sql.ErrNoRows {
             return nil, fmt.Errorf("pergunta com ID %d não encontrada", id)
         }
+        r.logger.Error("erro ao buscar pergunta ID=%d: %v", id, err)
         return nil, fmt.Errorf("erro ao buscar pergunta: %v", err)
     }
     
     return pergunta, nil
 }
 
-// GetByPesquisaID - método necessário para o DashboardUseCase
 func (r *PerguntaRepository) GetByPesquisaID(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
     query := `
         SELECT id_pergunta, id_pesquisa, texto_pergunta, tipo_pergunta, ordem_exibicao, opcoes_resposta
@@ -116,6 +131,7 @@ func (r *PerguntaRepository) GetByPesquisaID(ctx context.Context, pesquisaID int
     
     rows, err := r.db.QueryContext(ctx, query, pesquisaID)
     if err != nil {
+        r.logger.Error("erro ao listar perguntas pesquisa ID=%d: %v", pesquisaID, err)
         return nil, fmt.Errorf("erro ao listar perguntas: %v", err)
     }
     defer rows.Close()
@@ -133,6 +149,7 @@ func (r *PerguntaRepository) GetByPesquisaID(ctx context.Context, pesquisaID int
             &pergunta.OpcoesResposta,
         )
         if err != nil {
+            r.logger.Error("erro ao escanear pergunta: %v", err)
             return nil, fmt.Errorf("erro ao escanear pergunta: %v", err)
         }
         perguntas = append(perguntas, pergunta)
@@ -142,7 +159,6 @@ func (r *PerguntaRepository) GetByPesquisaID(ctx context.Context, pesquisaID int
 }
 
 func (r *PerguntaRepository) ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
-    // Este método já existe - pode usar GetByPesquisaID ou manter ambos
     return r.GetByPesquisaID(ctx, pesquisaID)
 }
 
@@ -162,6 +178,7 @@ func (r *PerguntaRepository) Update(ctx context.Context, pergunta *entity.Pergun
     )
     
     if err != nil {
+        r.logger.Error("erro ao atualizar pergunta ID=%d: %v", pergunta.ID, err)
         return fmt.Errorf("erro ao atualizar pergunta: %v", err)
     }
     
@@ -186,6 +203,7 @@ func (r *PerguntaRepository) UpdateOrdem(ctx context.Context, perguntaID int, no
     
     result, err := r.db.ExecContext(ctx, query, perguntaID, novaOrdem)
     if err != nil {
+        r.logger.Error("erro ao atualizar ordem pergunta ID=%d: %v", perguntaID, err)
         return fmt.Errorf("erro ao atualizar ordem da pergunta: %v", err)
     }
     
@@ -202,11 +220,11 @@ func (r *PerguntaRepository) UpdateOrdem(ctx context.Context, perguntaID int, no
 }
 
 func (r *PerguntaRepository) Delete(ctx context.Context, id int) error {
-    // Verifica se há respostas vinculadas
     var count int
     checkQuery := `SELECT COUNT(*) FROM resposta WHERE id_pergunta = $1`
     err := r.db.QueryRowContext(ctx, checkQuery, id).Scan(&count)
     if err != nil {
+        r.logger.Error("erro ao verificar dependências pergunta ID=%d: %v", id, err)
         return fmt.Errorf("erro ao verificar dependências: %v", err)
     }
     
@@ -217,6 +235,7 @@ func (r *PerguntaRepository) Delete(ctx context.Context, id int) error {
     query := `DELETE FROM pergunta WHERE id_pergunta = $1`
     result, err := r.db.ExecContext(ctx, query, id)
     if err != nil {
+        r.logger.Error("erro ao deletar pergunta ID=%d: %v", id, err)
         return fmt.Errorf("erro ao deletar pergunta: %v", err)
     }
     

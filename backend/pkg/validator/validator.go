@@ -1,5 +1,5 @@
-// Package validator provides validation functions for common business entities
-// and input data with consistent error handling and comprehensive validation rules.
+// /pkg/validator/validator.go
+
 package validator
 
 import (
@@ -10,40 +10,42 @@ import (
 	"unicode"
 )
 
-// Constants define validation constraints and limits
+// Constants
 const (
-	MinPasswordLength = 8  // Minimum password length for security compliance
-	CNPJLength       = 14 // CNPJ must contain exactly 14 digits
+	MinPasswordLength = 8
+	CNPJLength        = 14
 )
 
-// Pre-compiled regex patterns for performance optimization
+// Regex patterns
 var (
-	// emailRegex validates standard email format according to RFC 5322
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	// cnpjRegex removes all non-digit characters for normalization
 	cnpjRegex  = regexp.MustCompile(`\D`)
 )
 
-// ValidationError represents a structured validation error with field context
-type ValidationError struct {
-	Field   string // Name of the field that failed validation
-	Message string // Human-readable error message
+// Validator struct
+type Validator struct{}
+
+// New creates a new Validator instance
+func New() *Validator {
+	return &Validator{}
 }
 
-// Error implements the error interface for ValidationError
+// ValidationError struct
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
 func (e ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
-// IsEmail validates if the provided string is a well-formed email address.
-// It trims whitespace and checks against RFC 5322 format.
-// Returns ValidationError if email is empty or malformed.
-func IsEmail(email string) error {
+// IsEmail validates email format
+func (v *Validator) IsEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
 		return ValidationError{"email", "required"}
 	}
-	
 	if !emailRegex.MatchString(email) {
 		return ValidationError{"email", "invalid format"}
 	}
@@ -53,7 +55,7 @@ func IsEmail(email string) error {
 // IsCNPJ validates Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica) format.
 // Performs complete validation including check digit algorithm.
 // Returns ValidationError if CNPJ format or check digits are invalid.
-func IsCNPJ(cnpj string) error {
+func (v *Validator) IsCNPJ(cnpj string) error {
 	cnpjNumbers := cnpjRegex.ReplaceAllString(cnpj, "")
 	
 	if len(cnpjNumbers) != CNPJLength {
@@ -131,7 +133,7 @@ func isValidCNPJCheckDigits(cnpj string) bool {
 // IsPasswordStrong validates password strength according to security best practices.
 // Enforces minimum length and requires uppercase, lowercase, numeric, and special characters.
 // Returns ValidationError with specific requirement that failed.
-func IsPasswordStrong(password string) error {
+func (v *Validator) IsPasswordStrong(password string) error{
 	if len(password) < MinPasswordLength {
 		return ValidationError{"password", fmt.Sprintf("must be at least %d characters", MinPasswordLength)}
 	}
@@ -171,7 +173,7 @@ func IsPasswordStrong(password string) error {
 
 // IsValidStatus checks if the provided status is in the list of valid statuses.
 // Returns ValidationError with available options if status is invalid.
-func IsValidStatus(status string, validStatuses []string) error {
+func (v *Validator) IsValidStatus(status string, validStatuses []string) error {
 	for _, validStatus := range validStatuses {
 		if status == validStatus {
 			return nil

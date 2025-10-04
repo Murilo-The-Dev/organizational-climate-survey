@@ -245,6 +245,7 @@ func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} response.ErrorResponse
 // @Failure 500 {object} response.ErrorResponse
 // @Router /auth/change-password [post]
+// ChangePassword method no auth_handler.go
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
 	
@@ -253,7 +254,6 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validação básica
 	if err := h.validateChangePasswordRequest(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
@@ -267,20 +267,19 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	clientIP := h.getClientIP(r)
 
-	// Verificar senha atual
 	usuario, err := h.usuarioUseCase.GetByID(r.Context(), userAdminID)
 	if err != nil {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
 
-	// Validar senha atual
-	if !h.usuarioUseCase.ValidatePassword(req.SenhaAtual, usuario.SenhaHash) {
+	// MUDAR: authenticate para validar senha atual
+	_, err = h.usuarioUseCase.Authenticate(r.Context(), usuario.Email, req.SenhaAtual, clientIP)
+	if err != nil {
 		response.WriteError(w, http.StatusUnauthorized, "Senha atual incorreta", "A senha atual fornecida está incorreta")
 		return
 	}
 
-	// Atualizar senha
 	if err := h.usuarioUseCase.UpdatePassword(r.Context(), userAdminID, req.NovaSenha, userAdminID, clientIP); err != nil {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return

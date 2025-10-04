@@ -4,60 +4,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"organizational-climate-survey/backend/internal/application/dto"
+	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 	"strconv"
 	"strings"
-
-	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
-	"organizational-climate-survey/backend/internal/application/dto/response"
-	"organizational-climate-survey/backend/internal/domain/entity"
 
 	"github.com/gorilla/mux"
 )
 
 type SetorHandler struct {
 	setorUseCase *usecase.SetorUseCase
+	log          logger.Logger
 }
 
-func NewSetorHandler(setorUseCase *usecase.SetorUseCase) *SetorHandler {
+func NewSetorHandler(setorUseCase *usecase.SetorUseCase, log logger.Logger) *SetorHandler {
 	return &SetorHandler{
 		setorUseCase: setorUseCase,
+		log:          log,
 	}
 }
 
-// CreateSetor godoc
-// @Summary Criar novo setor
-// @Description Cria um novo setor para uma empresa
-// @Tags setores
-// @Accept json
-// @Produce json
-// @Param setor body dto.SetorCreateRequest true "Dados do setor"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /setores [post]
 func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 	var req dto.SetorCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validateSetorCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
 	setor := req.ToEntity()
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-
 	if err := h.setorUseCase.Create(r.Context(), setor, userAdminID, clientIP); err != nil {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar setor: %v", err)
 		if strings.Contains(err.Error(), "já existe") {
 			response.WriteError(w, http.StatusConflict, "Setor já existe", err.Error())
 			return
@@ -65,10 +51,10 @@ func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
-	setorResponse := h.toSetorResponse(setor)
-	response.WriteSuccess(w, http.StatusCreated, "Setor criado com sucesso", setorResponse)
+	h.log.WithFields(map[string]interface{}{"setor_id": setor.ID, "user_admin_id": userAdminID}).Info("Setor criado com sucesso")
+	response.WriteSuccess(w, http.StatusCreated, "Setor criado com sucesso", h.toSetorResponse(setor))
 }
+
 
 // GetSetor godoc
 // @Summary Buscar setor por ID

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,6 +10,8 @@ import (
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/pkg/logger"
+	"organizational-climate-survey/backend/pkg/validator"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -18,64 +19,66 @@ import (
 
 type UsuarioAdministradorHandler struct {
 	usuarioUseCase *usecase.UsuarioAdministradorUseCase
+	log            logger.Logger
+	validator      *validator.Validator
 }
 
-func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministradorUseCase) *UsuarioAdministradorHandler {
+func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministradorUseCase, log logger.Logger, val *validator.Validator) *UsuarioAdministradorHandler {
 	return &UsuarioAdministradorHandler{
 		usuarioUseCase: usuarioUseCase,
+		log:            log,
+		validator:      val,
 	}
 }
 
-// DTOs locais para operações específicas
 type PasswordUpdateRequest struct {
-	NovaSenha string `json:"nova_senha" binding:"required,min=8,max=128"`
+	NovaSenha string `json:"nova_senha"`
 }
 
 type StatusUpdateRequest struct {
-	Status string `json:"status" binding:"required,oneof=Ativo Inativo Pendente"`
+	Status string `json:"status"`
 }
 
-// CreateUsuarioAdministrador godoc
-// @Summary Criar novo usuário administrador
-// @Description Cria um novo usuário administrador no sistema
-// @Tags usuarios-administradores
-// @Accept json
-// @Produce json
-// @Param usuario body dto.UsuarioAdministradorCreateRequest true "Dados do usuário"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores [post]
 func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	var req dto.UsuarioAdministradorCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
 
-	// Validação básica
+	if err := h.validator.IsEmail(req.Email); err != nil {
+		h.log.WithContext(r.Context()).Info("Email inválido: %v", err)
+		response.WriteError(w, http.StatusBadRequest, "Email inválido", err.Error())
+		return
+	}
+
+	if err := h.validator.IsPasswordStrong(req.Senha); err != nil {
+		h.log.WithContext(r.Context()).Info("Senha fraca: %v", err)
+		response.WriteError(w, http.StatusBadRequest, "Senha não atende requisitos", err.Error())
+		return
+	}
+
 	if err := h.validateUsuarioCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
 
-	// Gerar hash da senha
 	senhaHash, err := bcrypt.GenerateFromPassword([]byte(req.Senha), bcrypt.DefaultCost)
 	if err != nil {
+		h.log.WithContext(r.Context()).Error("Erro ao gerar hash: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "Erro ao processar senha", err.Error())
 		return
 	}
 
 	usuario := req.ToEntity(string(senhaHash))
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
 	if err := h.usuarioUseCase.Create(r.Context(), usuario, userAdminID, clientIP); err != nil {
-		if strings.Contains(err.Error(), "já cadastrado") || strings.Contains(err.Error(), "já está sendo usado") {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID}).Error("Erro ao criar usuario: %v", err)
+		if strings.Contains(err.Error(), "já cadastrado") {
 			response.WriteError(w, http.StatusConflict, "Email já em uso", err.Error())
 			return
 		}
@@ -83,21 +86,10 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 		return
 	}
 
-	usuarioResponse := h.toUsuarioResponse(usuario)
-	response.WriteSuccess(w, http.StatusCreated, "Usuário criado com sucesso", usuarioResponse)
+	h.log.WithFields(map[string]interface{}{"usuario_id": usuario.ID, "user_admin_id": userAdminID}).Info("Usuário administrador criado com sucesso")
+	response.WriteSuccess(w, http.StatusCreated, "Usuário criado com sucesso", h.toUsuarioResponse(usuario))
 }
 
-// GetUsuarioAdministrador godoc
-// @Summary Buscar usuário administrador por ID
-// @Description Retorna um usuário administrador específico pelo ID
-// @Tags usuarios-administradores
-// @Produce json
-// @Param id path int true "ID do usuário"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/{id} [get]
 func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -120,17 +112,6 @@ func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWri
 	response.WriteSuccess(w, http.StatusOK, "Usuário encontrado", usuarioResponse)
 }
 
-// ListUsuariosByEmpresa godoc
-// @Summary Listar usuários por empresa
-// @Description Retorna lista de usuários administradores de uma empresa
-// @Tags usuarios-administradores
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param status query string false "Filtrar por status"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /empresas/{empresa_id}/usuarios-administradores [get]
 func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -154,7 +135,6 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 		return
 	}
 
-	// Converter para response
 	usuariosResponse := make([]interface{}, len(usuarios))
 	for i, usuario := range usuarios {
 		usuariosResponse[i] = h.toUsuarioResponse(usuario)
@@ -163,20 +143,6 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 	response.WriteSuccess(w, http.StatusOK, "Usuários listados com sucesso", usuariosResponse)
 }
 
-// UpdateUsuarioAdministrador godoc
-// @Summary Atualizar usuário administrador
-// @Description Atualiza dados de um usuário administrador existente
-// @Tags usuarios-administradores
-// @Accept json
-// @Produce json
-// @Param id path int true "ID do usuário"
-// @Param usuario body dto.UsuarioAdministradorUpdateRequest true "Dados para atualização"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/{id} [put]
 func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -191,7 +157,14 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 		return
 	}
 
-	// Buscar usuário existente
+	if req.Email != nil && *req.Email != "" {
+		if err := h.validator.IsEmail(*req.Email); err != nil {
+			h.log.WithContext(r.Context()).Info("Email inválido: %v", err)
+			response.WriteError(w, http.StatusBadRequest, "Email inválido", err.Error())
+			return
+		}
+	}
+
 	usuario, err := h.usuarioUseCase.GetByID(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
@@ -202,10 +175,8 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 		return
 	}
 
-	// Aplicar atualizações
 	req.ApplyToEntity(usuario)
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -222,19 +193,6 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 	response.WriteSuccess(w, http.StatusOK, "Usuário atualizado com sucesso", usuarioResponse)
 }
 
-// UpdatePassword godoc
-// @Summary Atualizar senha do usuário
-// @Description Atualiza a senha de um usuário administrador
-// @Tags usuarios-administradores
-// @Accept json
-// @Produce json
-// @Param id path int true "ID do usuário"
-// @Param password body PasswordUpdateRequest true "Nova senha"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/{id}/password [put]
 func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -249,13 +207,12 @@ func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Validação da senha
-	if err := h.validatePassword(req.NovaSenha); err != nil {
-		response.WriteError(w, http.StatusBadRequest, "Senha inválida", err.Error())
+	if err := h.validator.IsPasswordStrong(req.NovaSenha); err != nil {
+		h.log.WithContext(r.Context()).Info("Senha fraca: %v", err)
+		response.WriteError(w, http.StatusBadRequest, "Senha não atende requisitos", err.Error())
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -271,19 +228,6 @@ func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *h
 	response.WriteSuccess(w, http.StatusOK, "Senha atualizada com sucesso", nil)
 }
 
-// UpdateStatus godoc
-// @Summary Atualizar status do usuário
-// @Description Atualiza o status de um usuário administrador
-// @Tags usuarios-administradores
-// @Accept json
-// @Produce json
-// @Param id path int true "ID do usuário"
-// @Param status body StatusUpdateRequest true "Novo status"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/{id}/status [put]
 func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -298,13 +242,12 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Validação do status
-	if !h.isValidStatus(req.Status) {
-		response.WriteError(w, http.StatusBadRequest, "Status inválido", "Status deve ser: Ativo, Inativo ou Pendente")
+	validStatuses := []string{"Ativo", "Inativo", "Pendente"}
+	if err := h.validator.IsValidStatus(req.Status, validStatuses); err != nil {
+		response.WriteError(w, http.StatusBadRequest, "Status inválido", err.Error())
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -320,18 +263,6 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Status atualizado com sucesso", nil)
 }
 
-// DeleteUsuarioAdministrador godoc
-// @Summary Deletar usuário administrador
-// @Description Remove um usuário administrador do sistema
-// @Tags usuarios-administradores
-// @Produce json
-// @Param id path int true "ID do usuário"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/{id} [delete]
 func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -340,7 +271,6 @@ func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.Response
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -360,23 +290,12 @@ func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.Response
 	response.WriteSuccess(w, http.StatusOK, "Usuário deletado com sucesso", nil)
 }
 
-// GetUsuarioByEmail godoc
-// @Summary Buscar usuário por email
-// @Description Retorna um usuário administrador específico pelo email
-// @Tags usuarios-administradores
-// @Produce json
-// @Param email path string true "Email do usuário"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /usuarios-administradores/email/{email} [get]
 func (h *UsuarioAdministradorHandler) GetUsuarioByEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	email := vars["email"]
 
-	if strings.TrimSpace(email) == "" {
-		response.WriteError(w, http.StatusBadRequest, "Email inválido", "Email é obrigatório")
+	if err := h.validator.IsEmail(email); err != nil {
+		response.WriteError(w, http.StatusBadRequest, "Email inválido", err.Error())
 		return
 	}
 
@@ -394,48 +313,15 @@ func (h *UsuarioAdministradorHandler) GetUsuarioByEmail(w http.ResponseWriter, r
 	response.WriteSuccess(w, http.StatusOK, "Usuário encontrado", usuarioResponse)
 }
 
-// Métodos auxiliares
-
 func (h *UsuarioAdministradorHandler) validateUsuarioCreateRequest(req *dto.UsuarioAdministradorCreateRequest) error {
 	if req.IDEmpresa <= 0 {
-		return fmt.Errorf("ID da empresa é obrigatório")
+		return validator.ValidationError{Field: "id_empresa", Message: "obrigatório"}
 	}
 	if strings.TrimSpace(req.NomeAdmin) == "" {
-		return fmt.Errorf("nome do administrador é obrigatório")
+		return validator.ValidationError{Field: "nome_admin", Message: "obrigatório"}
 	}
-	if strings.TrimSpace(req.Email) == "" {
-		return fmt.Errorf("email é obrigatório")
-	}
-	if !strings.Contains(req.Email, "@") {
-		return fmt.Errorf("email inválido")
-	}
-	if err := h.validatePassword(req.Senha); err != nil {
-		return err
-	}
-	if !h.isValidStatus(req.Status) {
-		return fmt.Errorf("status inválido")
-	}
-	return nil
-}
-
-func (h *UsuarioAdministradorHandler) validatePassword(password string) error {
-	if len(password) < 8 {
-		return fmt.Errorf("senha deve ter pelo menos 8 caracteres")
-	}
-	if len(password) > 100 {
-		return fmt.Errorf("senha não pode exceder 100 caracteres")
-	}
-	return nil
-}
-
-func (h *UsuarioAdministradorHandler) isValidStatus(status string) bool {
 	validStatuses := []string{"Ativo", "Inativo", "Pendente"}
-	for _, validStatus := range validStatuses {
-		if status == validStatus {
-			return true
-		}
-	}
-	return false
+	return h.validator.IsValidStatus(req.Status, validStatuses)
 }
 
 func (h *UsuarioAdministradorHandler) getUserAdminIDFromContext(r *http.Request) int {
@@ -457,7 +343,6 @@ func (h *UsuarioAdministradorHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// toUsuarioResponse converte entity.UsuarioAdministrador para response.UsuarioAdministradorResponse
 func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioAdministrador) response.UsuarioAdministradorResponse {
 	resp := response.UsuarioAdministradorResponse{
 		ID:           usuario.ID,
@@ -467,7 +352,6 @@ func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioA
 		Status:       usuario.Status,
 	}
 
-	// Converte empresa se carregada
 	if usuario.Empresa != nil {
 		empresaResp := &response.EmpresaResponse{
 			ID:           usuario.Empresa.ID,
@@ -482,7 +366,6 @@ func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioA
 	return resp
 }
 
-// RegisterRoutes registra as rotas do handler
 func (h *UsuarioAdministradorHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/usuarios-administradores", h.CreateUsuarioAdministrador).Methods("POST")
 	router.HandleFunc("/usuarios-administradores/{id:[0-9]+}", h.GetUsuarioAdministrador).Methods("GET")

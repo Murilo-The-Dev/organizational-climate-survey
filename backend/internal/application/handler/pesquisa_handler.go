@@ -2,72 +2,58 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-
+	"fmt"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/application/dto"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
 )
 
 type PesquisaHandler struct {
 	pesquisaUseCase *usecase.PesquisaUseCase
+	log             logger.Logger
 }
 
-func NewPesquisaHandler(pesquisaUseCase *usecase.PesquisaUseCase) *PesquisaHandler {
+func NewPesquisaHandler(pesquisaUseCase *usecase.PesquisaUseCase, log logger.Logger) *PesquisaHandler {
 	return &PesquisaHandler{
 		pesquisaUseCase: pesquisaUseCase,
+		log:             log,
 	}
 }
 
-// CreatePesquisa godoc
-// @Summary Criar nova pesquisa
-// @Description Cria uma nova pesquisa de clima organizacional
-// @Tags pesquisas
-// @Accept json
-// @Produce json
-// @Param pesquisa body dto.PesquisaCreateRequest true "Dados da pesquisa"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas [post]
 func (h *PesquisaHandler) CreatePesquisa(w http.ResponseWriter, r *http.Request) {
 	var req dto.PesquisaCreateRequest
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-
-	// Validação básica
 	if err := h.validatePesquisaCreateRequest(&req); err != nil {
+		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-
 	pesquisa, err := req.ToEntity()
 	if err != nil {
-		response.WriteError(w, http.StatusBadRequest, "Erro na conversão de dados", err.Error())
+		h.log.WithContext(r.Context()).Warn("Conversão entidade erro: %v", err)
+		response.WriteError(w, http.StatusBadRequest, "Erro de conversão", err.Error())
 		return
 	}
-	
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-
 	if err := h.pesquisaUseCase.Create(r.Context(), pesquisa, userAdminID, clientIP); err != nil {
+		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar pesquisa: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-
-	// Criar resposta usando função helper do response
-	pesquisaResponse := h.toPesquisaResponse(pesquisa)
-	response.WriteSuccess(w, http.StatusCreated, "Pesquisa criada com sucesso", pesquisaResponse)
+	h.log.WithFields(map[string]interface{}{"pesquisa_id": pesquisa.ID, "user_admin_id": userAdminID}).Info("Pesquisa criada com sucesso")
+	response.WriteSuccess(w, http.StatusCreated, "Pesquisa criada com sucesso", h.toPesquisaResponse(pesquisa))
 }
 
 // GetPesquisa godoc
