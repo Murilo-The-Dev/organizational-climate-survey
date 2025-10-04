@@ -11,6 +11,7 @@ import (
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
+	"organizational-climate-survey/backend/pkg/validator"
 
 	"github.com/gorilla/mux"
 )
@@ -18,12 +19,14 @@ import (
 type EmpresaHandler struct {
 	empresaUseCase *usecase.EmpresaUseCase
 	log            logger.Logger
+	validator      *validator.Validator
 }
 
-func NewEmpresaHandler(empresaUseCase *usecase.EmpresaUseCase, log logger.Logger) *EmpresaHandler {
+func NewEmpresaHandler(empresaUseCase *usecase.EmpresaUseCase, log logger.Logger, val *validator.Validator) *EmpresaHandler {
 	return &EmpresaHandler{
 		empresaUseCase: empresaUseCase,
 		log:            log,
+		validator:      val,
 	}
 }
 
@@ -34,14 +37,25 @@ func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-	if err := h.validateEmpresaCreateRequest(&req); err != nil {
+
+	if strings.TrimSpace(req.NomeFantasia) == "" {
+		response.WriteError(w, http.StatusBadRequest, "Validação falhou", "nome fantasia é obrigatório")
+		return
+	}
+	if strings.TrimSpace(req.RazaoSocial) == "" {
+		response.WriteError(w, http.StatusBadRequest, "Validação falhou", "razão social é obrigatória")
+		return
+	}
+	if err := h.validator.IsCNPJ(req.CNPJ); err != nil {
 		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
+
 	empresa := req.ToEntity()
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
+
 	if err := h.empresaUseCase.Create(r.Context(), empresa, userAdminID, clientIP); err != nil {
 		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar empresa: %v", err)
 		if strings.Contains(err.Error(), "já cadastrada") {
@@ -51,6 +65,7 @@ func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
+
 	h.log.WithFields(map[string]interface{}{"empresa_id": empresa.ID, "user_admin_id": userAdminID, "client_ip": clientIP}).Info("Empresa criada com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Empresa criada com sucesso", response.ToEmpresaResponse(empresa))
 }
@@ -164,7 +179,7 @@ func (h *EmpresaHandler) UpdateEmpresa(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Aplicar atualizações
+	// Aplicar atualizações do DTO na entidade
 	req.ApplyToEntity(empresa)
 
 	// Obter informações do usuário autenticado

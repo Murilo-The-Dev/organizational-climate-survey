@@ -1,3 +1,4 @@
+// router.go
 package http
 
 import (
@@ -9,11 +10,11 @@ import (
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/infrastructure/auth"
 	"organizational-climate-survey/backend/pkg/logger"
+	"organizational-climate-survey/backend/pkg/validator"
 
 	"github.com/gorilla/mux"
 )
 
-// RouterConfig contém as configurações necessárias para o roteador
 type RouterConfig struct {
 	EmpresaUseCase              *usecase.EmpresaUseCase
 	UsuarioAdministradorUseCase *usecase.UsuarioAdministradorUseCase
@@ -26,15 +27,12 @@ type RouterConfig struct {
 	JWTSecret                   string
 }
 
-// SetupRouter configura e retorna o roteador principal com todas as rotas
 func SetupRouter(config *RouterConfig) *mux.Router {
-	// Criar roteador principal
 	router := mux.NewRouter()
 
-	// Criar instância de logger (usar DefaultConfig se necessário)
 	log := logger.New(nil)
+	val := validator.New()
 
-	// Criar handlers
 	authHandler := auth.NewAuthHandler(
 		config.UsuarioAdministradorUseCase,
 		config.LogAuditoriaUseCase,
@@ -43,12 +41,12 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 
 	var empresaHandler *handler.EmpresaHandler
 	if config.EmpresaUseCase != nil {
-		empresaHandler = handler.NewEmpresaHandler(config.EmpresaUseCase, log)
+		empresaHandler = handler.NewEmpresaHandler(config.EmpresaUseCase, log, val)
 	}
 
 	var usuarioHandler *handler.UsuarioAdministradorHandler
 	if config.UsuarioAdministradorUseCase != nil {
-		usuarioHandler = handler.NewUsuarioAdministradorHandler(config.UsuarioAdministradorUseCase, log)
+		usuarioHandler = handler.NewUsuarioAdministradorHandler(config.UsuarioAdministradorUseCase, log, val)
 	}
 
 	var setorHandler *handler.SetorHandler
@@ -81,24 +79,19 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		logHandler = handler.NewLogAuditoriaHandler(config.LogAuditoriaUseCase, log)
 	}
 
-	// Configurar rotas de API
 	api := router.PathPrefix("/api/v1").Subrouter()
 
-	// Rotas públicas (sem autenticação)
 	publicRoutes := api.PathPrefix("").Subrouter()
 	publicRoutes.Use(middleware.PublicMiddlewares())
 
-	// Rotas de autenticação
 	authHandler.RegisterRoutes(publicRoutes)
 
-	// Rota pública para submissão de respostas
 	if respostaHandler != nil {
 		surveyRoutes := api.PathPrefix("").Subrouter()
 		surveyRoutes.Use(middleware.SurveySubmissionMiddlewares())
 		surveyRoutes.HandleFunc("/respostas/submit", respostaHandler.SubmitRespostas).Methods("POST")
 	}
 
-	// Rotas autenticadas
 	authRoutes := api.PathPrefix("").Subrouter()
 	authRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
 
@@ -121,7 +114,6 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		dashboardHandler.RegisterRoutes(authRoutes)
 	}
 
-	// Rotas administrativas (com middlewares extras)
 	adminRoutes := api.PathPrefix("").Subrouter()
 	adminRoutes.Use(middleware.AdminMiddlewares([]byte(config.JWTSecret)))
 
@@ -129,7 +121,6 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		logHandler.RegisterRoutes(adminRoutes)
 	}
 
-	// Rotas de respostas administrativas (exceto submissão pública)
 	if respostaHandler != nil {
 		respostaAdminRoutes := api.PathPrefix("").Subrouter()
 		respostaAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
@@ -144,16 +135,12 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/stats", respostaHandler.GetStatsByPergunta).Methods("GET")
 	}
 
-	// Rota de health check
 	router.HandleFunc("/health", HealthCheckHandler).Methods("GET")
-
-	// Rota de documentação da API (Swagger)
 	router.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("./docs/"))))
 
 	return router
 }
 
-// HealthCheckHandler verifica se a API está funcionando
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -170,14 +157,12 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(response))
 }
 
-// SetupCORSRouter configura um roteador com CORS habilitado para desenvolvimento
 func SetupCORSRouter(config *RouterConfig) *mux.Router {
 	router := SetupRouter(config)
 	router.Use(middleware.CORSMiddleware)
 	return router
 }
 
-// SetupMinimalRouter cria um router mínimo apenas com as funcionalidades básicas
 func SetupMinimalRouter(config *RouterConfig) *mux.Router {
 	router := mux.NewRouter()
 
