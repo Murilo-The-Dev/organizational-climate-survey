@@ -1,3 +1,4 @@
+// Package config fornece a estrutura e funções para carregar a configuração da aplicação a partir de variáveis de ambiente.
 package config
 
 import (
@@ -5,28 +6,30 @@ import (
 	"os"
 )
 
+// Config agrupa todas as configurações da aplicação, incluindo App, Database, JWT e Log.
 type Config struct {
 	App struct {
-		Name string
-		Port string
-		Env  string
+		Name string // Nome da aplicação
+		Port string // Porta em que a aplicação será executada
+		Env  string // Ambiente (development, production, etc.)
 	}
 	Database struct {
-		Host     string
-		Port     string
-		User     string
-		Password string
-		DBName   string
-		SSLMode  string
+		Host     string // Host do banco de dados
+		Port     string // Porta do banco de dados
+		User     string // Usuário do banco
+		Password string // Senha do banco
+		DBName   string // Nome do banco
+		SSLMode  string // Modo SSL
 	}
 	JWT struct {
-		Secret string
+		Secret string // Chave secreta para JWT
 	}
 	Log struct {
-		Level string
+		Level string // Nível de log (debug, info, etc.)
 	}
 }
 
+// LoadConfig lê as variáveis de ambiente e preenche a struct Config, aplicando defaults quando necessário.
 func LoadConfig() (*Config, error) {
 	cfg := &Config{}
 
@@ -42,10 +45,9 @@ func LoadConfig() (*Config, error) {
 	cfg.Database.SSLMode = getEnvWithDefault("DB_SSLMODE", "disable")
 
 	cfg.JWT.Secret = os.Getenv("JWT_SECRET")
-
 	cfg.Log.Level = getEnvWithDefault("LOG_LEVEL", "debug")
 
-	// Validações básicas
+	// Validações obrigatórias
 	if cfg.Database.Password == "" {
 		return nil, fmt.Errorf("DB_PASS não configurado nas variáveis de ambiente")
 	}
@@ -56,6 +58,7 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
+// getEnvWithDefault retorna o valor da variável de ambiente ou um valor padrão caso não esteja definida.
 func getEnvWithDefault(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

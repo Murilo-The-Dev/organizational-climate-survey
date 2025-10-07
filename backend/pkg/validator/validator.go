@@ -1,7 +1,7 @@
-// /pkg/validator/validator.go
-
+// Package validator implementa funcionalidades de validação para dados da aplicação.
 package validator
 
+// Importação dos pacotes necessários
 import (
 	"fmt"
 	"regexp"
@@ -10,37 +10,39 @@ import (
 	"unicode"
 )
 
-// Constants
+// Constantes do pacote
 const (
-	MinPasswordLength = 8
-	CNPJLength        = 14
+	MinPasswordLength = 8  // Comprimento mínimo para senhas
+	CNPJLength        = 14 // Comprimento padrão do CNPJ
 )
 
-// Regex patterns
+// Expressões regulares pré-compiladas para validações
 var (
-	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	cnpjRegex  = regexp.MustCompile(`\D`)
+	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`) // Validação de email
+	cnpjRegex  = regexp.MustCompile(`\D`)                                               // Remove caracteres não numéricos do CNPJ
 )
 
-// Validator struct
+// Validator: estrutura principal para validações
 type Validator struct{}
 
-// New creates a new Validator instance
+// New: construtor que cria uma nova instância do Validator
 func New() *Validator {
 	return &Validator{}
 }
 
-// ValidationError struct
+// ValidationError: estrutura para padronização de erros de validação
 type ValidationError struct {
-	Field   string
-	Message string
+	Field   string // Campo que gerou o erro
+	Message string // Mensagem descritiva do erro
 }
 
+// Error: implementa a interface error para ValidationError
 func (e ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
-// IsEmail validates email format
+// IsEmail: valida o formato de um endereço de email
+// Verifica se o email está vazio e se corresponde ao padrão esperado
 func (v *Validator) IsEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -52,29 +54,28 @@ func (v *Validator) IsEmail(email string) error {
 	return nil
 }
 
-// IsCNPJ validates Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica) format.
-// Performs complete validation including check digit algorithm.
-// Returns ValidationError if CNPJ format or check digits are invalid.
+// IsCNPJ: realiza a validação completa de um CNPJ
+// Inclui verificação de formato, dígitos repetidos e algoritmo dos dígitos verificadores
 func (v *Validator) IsCNPJ(cnpj string) error {
 	cnpjNumbers := cnpjRegex.ReplaceAllString(cnpj, "")
-	
+
 	if len(cnpjNumbers) != CNPJLength {
 		return ValidationError{"cnpj", "must contain 14 digits"}
 	}
-	
+
 	if isAllSameDigits(cnpjNumbers) {
 		return ValidationError{"cnpj", "invalid sequence"}
 	}
-	
+
 	if !isValidCNPJCheckDigits(cnpjNumbers) {
 		return ValidationError{"cnpj", "invalid check digits"}
 	}
-	
+
 	return nil
 }
 
-// isAllSameDigits checks if all characters in the string are identical.
-// Used to reject invalid CNPJ patterns like "11111111111111".
+// isAllSameDigits: verifica se todos os dígitos são iguais
+// Útil para evitar CNPJs inválidos como "11111111111111"
 func isAllSameDigits(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -88,20 +89,20 @@ func isAllSameDigits(s string) bool {
 	return true
 }
 
-// isValidCNPJCheckDigits implements the CNPJ check digit algorithm.
-// Uses official Brazilian algorithm with two verification digits.
+// isValidCNPJCheckDigits: implementa o algoritmo oficial de validação dos dígitos verificadores do CNPJ
+// Utiliza os pesos e cálculos conforme especificação da Receita Federal
 func isValidCNPJCheckDigits(cnpj string) bool {
-	// Weight arrays for check digit calculation
+	// Arrays de pesos para cálculo dos dígitos verificadores
 	weights1 := []int{5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
 	weights2 := []int{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
-	
-	// Convert string digits to integer array
+
+	// Converte string em array de inteiros
 	digits := make([]int, CNPJLength)
 	for i, char := range cnpj {
 		digits[i], _ = strconv.Atoi(string(char))
 	}
-	
-	// Calculate first check digit
+
+	// Calcula primeiro dígito verificador
 	sum := 0
 	for i := 0; i < 12; i++ {
 		sum += digits[i] * weights1[i]
@@ -111,12 +112,12 @@ func isValidCNPJCheckDigits(cnpj string) bool {
 	if remainder >= 2 {
 		checkDigit1 = 11 - remainder
 	}
-	
+
 	if digits[12] != checkDigit1 {
 		return false
 	}
-	
-	// Calculate second check digit
+
+	// Calcula segundo dígito verificador
 	sum = 0
 	for i := 0; i < 13; i++ {
 		sum += digits[i] * weights2[i]
@@ -126,21 +127,20 @@ func isValidCNPJCheckDigits(cnpj string) bool {
 	if remainder >= 2 {
 		checkDigit2 = 11 - remainder
 	}
-	
+
 	return digits[13] == checkDigit2
 }
 
-// IsPasswordStrong validates password strength according to security best practices.
-// Enforces minimum length and requires uppercase, lowercase, numeric, and special characters.
-// Returns ValidationError with specific requirement that failed.
-func (v *Validator) IsPasswordStrong(password string) error{
+// IsPasswordStrong: valida a força da senha segundo boas práticas de segurança
+// Verifica comprimento mínimo e presença de caracteres maiúsculos, minúsculos, números e especiais
+func (v *Validator) IsPasswordStrong(password string) error {
 	if len(password) < MinPasswordLength {
 		return ValidationError{"password", fmt.Sprintf("must be at least %d characters", MinPasswordLength)}
 	}
-	
+
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
-	
-	// Check each character type requirement
+
+	// Verifica cada tipo de caractere
 	for _, char := range password {
 		switch {
 		case unicode.IsUpper(char):
@@ -153,8 +153,8 @@ func (v *Validator) IsPasswordStrong(password string) error{
 			hasSpecial = true
 		}
 	}
-	
-	// Return specific error for first missing requirement
+
+	// Retorna erro específico para cada requisito não atendido
 	if !hasUpper {
 		return ValidationError{"password", "must contain uppercase letter"}
 	}
@@ -167,12 +167,12 @@ func (v *Validator) IsPasswordStrong(password string) error{
 	if !hasSpecial {
 		return ValidationError{"password", "must contain special character"}
 	}
-	
+
 	return nil
 }
 
-// IsValidStatus checks if the provided status is in the list of valid statuses.
-// Returns ValidationError with available options if status is invalid.
+// IsValidStatus: verifica se um status está presente na lista de status válidos
+// Retorna erro com as opções disponíveis caso o status seja inválido
 func (v *Validator) IsValidStatus(status string, validStatuses []string) error {
 	for _, validStatus := range validStatuses {
 		if status == validStatus {

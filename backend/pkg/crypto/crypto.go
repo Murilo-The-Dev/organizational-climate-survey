@@ -1,5 +1,5 @@
-// Package crypto provides secure cryptographic operations including password hashing,
-// token generation, and secure comparisons using industry-standard algorithms.
+// Package crypto fornece operações criptográficas seguras incluindo hash de senhas,
+// geração de tokens e comparações seguras usando algoritmos padrão da indústria.
 package crypto
 
 import (
@@ -7,43 +7,44 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Constants define security parameters and constraints
+// Constantes que definem parâmetros e restrições de segurança
 const (
-	DefaultBcryptCost = 12 // Recommended bcrypt cost for 2024+ (balance of security/performance)
-	MinTokenBytes     = 32 // Minimum token length for cryptographic security
+	DefaultBcryptCost = 12 // Custo bcrypt recomendado para 2024+ (equilíbrio entre segurança/performance)
+	MinTokenBytes     = 32 // Tamanho mínimo do token para segurança criptográfica
 )
 
-// Hasher interface defines password hashing operations
-// Abstracts the underlying hashing mechanism for testability and flexibility
+// Interface Hasher define operações de hash de senha
+// Abstrai o mecanismo de hash subjacente para testabilidade e flexibilidade
 type Hasher interface {
-	HashPassword(password string) (string, error) // Generate secure hash from password
-	CheckPasswordHash(password, hash string) bool // Verify password against hash
+	HashPassword(password string) (string, error) // Gera hash seguro a partir da senha
+	CheckPasswordHash(password, hash string) bool // Verifica senha contra hash
 }
 
-// TokenGenerator interface defines secure token and random byte generation
-// Used for session tokens, API keys, and cryptographic nonces
+// Interface TokenGenerator define geração segura de tokens e bytes aleatórios
+// Usado para tokens de sessão, chaves API e nonces criptográficos
 type TokenGenerator interface {
-	GenerateToken(length int) (string, error)       // Generate URL-safe base64 token
-	GenerateRandomBytes(length int) ([]byte, error) // Generate cryptographically secure random bytes
+	GenerateToken(length int) (string, error)       // Gera token base64 seguro para URL
+	GenerateRandomBytes(length int) ([]byte, error) // Gera bytes aleatórios criptograficamente seguros
 }
 
-// CryptoService combines all cryptographic operations in a single interface
-// Provides a unified API for all crypto-related functionality
+// CryptoService combina todas as operações criptográficas em uma única interface
+// Fornece uma API unificada para toda funcionalidade relacionada à criptografia
 type CryptoService interface {
 	Hasher
 	TokenGenerator
 }
 
-// cryptoService implements CryptoService with configurable bcrypt cost
+// cryptoService implementa CryptoService com custo bcrypt configurável
 type cryptoService struct {
-	bcryptCost int // Cost parameter for bcrypt (higher = more secure but slower)
+	bcryptCost int // Parâmetro de custo para bcrypt (maior = mais seguro mas mais lento)
 }
 
-// NewCryptoService creates a new CryptoService with specified bcrypt cost
-// Validates cost parameter against bcrypt min/max bounds for safety
+// NewCryptoService cria um novo CryptoService com custo bcrypt especificado
+// Valida parâmetro de custo contra limites min/max do bcrypt por segurança
 func NewCryptoService(bcryptCost int) CryptoService {
 	if bcryptCost < bcrypt.MinCost || bcryptCost > bcrypt.MaxCost {
 		bcryptCost = DefaultBcryptCost
@@ -53,77 +54,76 @@ func NewCryptoService(bcryptCost int) CryptoService {
 	}
 }
 
-// NewDefaultCryptoService creates a CryptoService with recommended default settings
-// Suitable for most production applications
+// NewDefaultCryptoService cria um CryptoService com configurações padrão recomendadas
+// Adequado para maioria das aplicações em produção
 func NewDefaultCryptoService() CryptoService {
 	return NewCryptoService(DefaultBcryptCost)
 }
 
-// HashPassword generates a bcrypt hash from a plaintext password
-// Returns error if password is empty or bcrypt fails
+// HashPassword gera um hash bcrypt a partir de uma senha em texto plano
+// Retorna erro se senha estiver vazia ou bcrypt falhar
 func (c *cryptoService) HashPassword(password string) (string, error) {
 	if password == "" {
-		return "", fmt.Errorf("password cannot be empty")
+		return "", fmt.Errorf("senha não pode estar vazia")
 	}
-	
+
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), c.bcryptCost)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(hashedBytes), nil
 }
 
-// CheckPasswordHash verifies a plaintext password against a bcrypt hash
-// Returns false for empty inputs to prevent timing attacks
+// CheckPasswordHash verifica uma senha em texto plano contra um hash bcrypt
+// Retorna falso para entradas vazias para prevenir ataques de tempo
 func (c *cryptoService) CheckPasswordHash(password, hash string) bool {
 	if password == "" || hash == "" {
 		return false
 	}
-	
+
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-// GenerateRandomBytes produces cryptographically secure random bytes
-// Uses crypto/rand for CSPRNG quality randomness
+// GenerateRandomBytes produz bytes aleatórios criptograficamente seguros
+// Usa crypto/rand para qualidade CSPRNG de aleatoriedade
 func (c *cryptoService) GenerateRandomBytes(length int) ([]byte, error) {
 	if length <= 0 {
-		return nil, fmt.Errorf("length must be positive")
+		return nil, fmt.Errorf("comprimento deve ser positivo")
 	}
-	
+
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
 		return nil, err
 	}
-	
+
 	return bytes, nil
 }
 
-// GenerateToken creates a URL-safe base64 encoded token
-// Enforces minimum length for security and uses cryptographically secure randomness
+// GenerateToken cria um token codificado em base64 seguro para URL
+// Força comprimento mínimo para segurança e usa aleatoriedade criptograficamente segura
 func (c *cryptoService) GenerateToken(length int) (string, error) {
 	if length < MinTokenBytes {
-		return "", fmt.Errorf("token length must be at least %d bytes", MinTokenBytes)
+		return "", fmt.Errorf("comprimento do token deve ser pelo menos %d bytes", MinTokenBytes)
 	}
-	
+
 	bytes, err := c.GenerateRandomBytes(length)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-// SecureCompare performs constant-time string comparison to prevent timing attacks
-// Essential for comparing tokens, hashes, and other security-sensitive values
+// SecureCompare realiza comparação de string em tempo constante para prevenir ataques de tempo
+// Essencial para comparar tokens, hashes e outros valores sensíveis à segurança
 func SecureCompare(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
-// SecureCompareBytes performs constant-time byte slice comparison
-// Lower-level version of SecureCompare for byte operations
+// SecureCompareBytes realiza comparação de slice de bytes em tempo constante
+// Versão de baixo nível do SecureCompare para operações com bytes
 func SecureCompareBytes(a, b []byte) bool {
 	return subtle.ConstantTimeCompare(a, b) == 1
 }
-

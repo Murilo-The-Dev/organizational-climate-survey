@@ -1,4 +1,5 @@
-// router.go
+// Package http implementa o roteamento HTTP e configuração do servidor web.
+// Fornece setup de rotas, middleware e handlers para a API REST.
 package http
 
 import (
@@ -15,18 +16,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// RouterConfig contém todas as dependências necessárias para configurar as rotas
 type RouterConfig struct {
-	EmpresaUseCase              *usecase.EmpresaUseCase
-	UsuarioAdministradorUseCase *usecase.UsuarioAdministradorUseCase
-	SetorUseCase                *usecase.SetorUseCase
-	PesquisaUseCase             *usecase.PesquisaUseCase
-	PerguntaUseCase             *usecase.PerguntaUseCase
-	RespostaUseCase             *usecase.RespostaUseCase
-	DashboardUseCase            *usecase.DashboardUseCase
-	LogAuditoriaUseCase         *usecase.LogAuditoriaUseCase
-	JWTSecret                   string
+	EmpresaUseCase              *usecase.EmpresaUseCase              // Use case de empresa
+	UsuarioAdministradorUseCase *usecase.UsuarioAdministradorUseCase // Use case de usuário admin
+	SetorUseCase                *usecase.SetorUseCase                // Use case de setor
+	PesquisaUseCase             *usecase.PesquisaUseCase             // Use case de pesquisa
+	PerguntaUseCase             *usecase.PerguntaUseCase             // Use case de pergunta
+	RespostaUseCase             *usecase.RespostaUseCase             // Use case de resposta
+	DashboardUseCase            *usecase.DashboardUseCase            // Use case de dashboard
+	LogAuditoriaUseCase         *usecase.LogAuditoriaUseCase         // Use case de log
+	JWTSecret                   string                               // Chave secreta para JWT
 }
 
+// SetupRouter configura todas as rotas da API com seus respectivos handlers
 func SetupRouter(config *RouterConfig) *mux.Router {
 	router := mux.NewRouter()
 
@@ -141,6 +144,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	return router
 }
 
+// HealthCheckHandler responde às requisições de verificação de saúde da API
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -157,12 +161,15 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(response))
 }
 
+// SetupCORSRouter configura o router com middleware CORS habilitado
 func SetupCORSRouter(config *RouterConfig) *mux.Router {
 	router := SetupRouter(config)
 	router.Use(middleware.CORSMiddleware)
 	return router
 }
 
+// SetupMinimalRouter configura um router mínimo com apenas rotas essenciais
+// Útil para ambientes de teste ou desenvolvimento
 func SetupMinimalRouter(config *RouterConfig) *mux.Router {
 	router := mux.NewRouter()
 

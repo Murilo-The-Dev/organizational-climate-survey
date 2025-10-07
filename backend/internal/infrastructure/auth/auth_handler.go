@@ -1,3 +1,5 @@
+// Package auth implementa handlers e middleware para autenticação e autorização.
+// Fornece funcionalidades de login, refresh token e gestão de senhas.
 package auth
 
 import (
@@ -7,20 +9,22 @@ import (
 	"strings"
 	"time"
 
-	"organizational-climate-survey/backend/internal/application/middleware"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/application/middleware"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 )
 
+// AuthHandler gerencia operações de autenticação e autorização
 type AuthHandler struct {
-	usuarioUseCase      *usecase.UsuarioAdministradorUseCase
-	logAuditoriaUseCase *usecase.LogAuditoriaUseCase
-	jwtSecret           []byte
+	usuarioUseCase      *usecase.UsuarioAdministradorUseCase // Use case de usuário admin
+	logAuditoriaUseCase *usecase.LogAuditoriaUseCase         // Use case para logs
+	jwtSecret           []byte                               // Chave secreta para JWT
 }
 
+// NewAuthHandler cria uma nova instância do handler de autenticação
 func NewAuthHandler(
 	usuarioUseCase *usecase.UsuarioAdministradorUseCase,
 	logAuditoriaUseCase *usecase.LogAuditoriaUseCase,
@@ -33,21 +37,10 @@ func NewAuthHandler(
 	}
 }
 
-// Login godoc
-// @Summary Autenticar usuário administrador
-// @Description Realiza login de usuário administrador e retorna token JWT
-// @Tags autenticacao
-// @Accept json
-// @Produce json
-// @Param credentials body dto.LoginRequest true "Credenciais de login"
-// @Success 200 {object} response.LoginResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /auth/login [post]
+// Login realiza autenticação do usuário e retorna token JWT
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -99,21 +92,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Login realizado com sucesso", loginResponse)
 }
 
-// RefreshToken godoc
-// @Summary Renovar token JWT
-// @Description Renova um token JWT válido
-// @Tags autenticacao
-// @Accept json
-// @Produce json
-// @Param token body dto.RefreshTokenRequest true "Token para renovação"
-// @Success 200 {object} response.RefreshTokenResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /auth/refresh [post]
+// RefreshToken renova um token JWT existente
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -158,17 +140,11 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Token renovado com sucesso", refreshResponse)
 }
 
-// Logout godoc
-// @Summary Realizar logout
-// @Description Invalida o token atual (implementação básica)
-// @Tags autenticacao
-// @Produce json
-// @Success 200 {object} response.SuccessResponse
-// @Router /auth/logout [post]
+// Logout invalida o token atual do usuário
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Em uma implementação completa, aqui seria adicionado o token a uma blacklist
 	// Por enquanto, apenas retorna sucesso
-	
+
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -180,20 +156,10 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Logout realizado com sucesso", nil)
 }
 
-// ValidateToken godoc
-// @Summary Validar token JWT
-// @Description Valida se um token JWT é válido
-// @Tags autenticacao
-// @Accept json
-// @Produce json
-// @Param token body dto.ValidateTokenRequest true "Token para validação"
-// @Success 200 {object} response.TokenValidationResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/validate [post]
+// ValidateToken verifica se um token JWT é válido
 func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 	var req ValidateTokenRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -233,22 +199,10 @@ func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Token validado", validationResponse)
 }
 
-// ChangePassword godoc
-// @Summary Alterar senha
-// @Description Permite ao usuário alterar sua própria senha
-// @Tags autenticacao
-// @Accept json
-// @Produce json
-// @Param password body dto.ChangePasswordRequest true "Dados para alteração de senha"
-// @Success 200 {object} response.SuccessResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /auth/change-password [post]
-// ChangePassword method no auth_handler.go
+// ChangePassword permite ao usuário alterar sua própria senha
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -288,20 +242,10 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Senha alterada com sucesso", nil)
 }
 
-// ForgotPassword godoc
-// @Summary Solicitar recuperação de senha
-// @Description Inicia processo de recuperação de senha por email
-// @Tags autenticacao
-// @Accept json
-// @Produce json
-// @Param email body dto.ForgotPasswordRequest true "Email para recuperação"
-// @Success 200 {object} response.SuccessResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /auth/forgot-password [post]
+// ForgotPassword inicia o processo de recuperação de senha
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var req ForgotPasswordRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -417,7 +361,7 @@ func (h *AuthHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/auth/login", h.Login).Methods("POST")
 	router.HandleFunc("/auth/forgot-password", h.ForgotPassword).Methods("POST")
 	router.HandleFunc("/auth/validate", h.ValidateToken).Methods("POST")
-	
+
 	// Rotas que requerem autenticação
 	router.HandleFunc("/auth/refresh", h.RefreshToken).Methods("POST")
 	router.HandleFunc("/auth/logout", h.Logout).Methods("POST")

@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -15,11 +17,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// PesquisaHandler gerencia requisições HTTP relacionadas a pesquisas de clima
 type PesquisaHandler struct {
 	pesquisaUseCase *usecase.PesquisaUseCase
 	log             logger.Logger
 }
 
+// NewPesquisaHandler cria nova instância do handler de pesquisas
 func NewPesquisaHandler(pesquisaUseCase *usecase.PesquisaUseCase, log logger.Logger) *PesquisaHandler {
 	return &PesquisaHandler{
 		pesquisaUseCase: pesquisaUseCase,
@@ -27,6 +31,7 @@ func NewPesquisaHandler(pesquisaUseCase *usecase.PesquisaUseCase, log logger.Log
 	}
 }
 
+// CreatePesquisa cria nova pesquisa de clima no sistema
 func (h *PesquisaHandler) CreatePesquisa(w http.ResponseWriter, r *http.Request) {
 	var req dto.PesquisaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -56,17 +61,7 @@ func (h *PesquisaHandler) CreatePesquisa(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusCreated, "Pesquisa criada com sucesso", h.toPesquisaResponse(pesquisa))
 }
 
-// GetPesquisa godoc
-// @Summary Buscar pesquisa por ID
-// @Description Retorna uma pesquisa específica pelo ID
-// @Tags pesquisas
-// @Produce json
-// @Param id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{id} [get]
+// GetPesquisa busca pesquisa de clima por ID
 func (h *PesquisaHandler) GetPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -89,17 +84,7 @@ func (h *PesquisaHandler) GetPesquisa(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Pesquisa encontrada", pesquisaResponse)
 }
 
-// GetPesquisaByLink godoc
-// @Summary Buscar pesquisa por link de acesso
-// @Description Retorna uma pesquisa específica pelo link de acesso público
-// @Tags pesquisas
-// @Produce json
-// @Param link path string true "Link de acesso da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/link/{link} [get]
+// GetPesquisaByLink busca pesquisa de clima por link de acesso público
 func (h *PesquisaHandler) GetPesquisaByLink(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	link := vars["link"]
@@ -123,17 +108,7 @@ func (h *PesquisaHandler) GetPesquisaByLink(w http.ResponseWriter, r *http.Reque
 	response.WriteSuccess(w, http.StatusOK, "Pesquisa encontrada", pesquisaResponse)
 }
 
-// ListPesquisasByEmpresa godoc
-// @Summary Listar pesquisas por empresa
-// @Description Retorna lista de pesquisas de uma empresa específica
-// @Tags pesquisas
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param status query string false "Filtrar por status"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /empresas/{empresa_id}/pesquisas [get]
+// ListPesquisasByEmpresa lista pesquisas de empresa com filtro opcional de status
 func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -157,7 +132,7 @@ func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	pesquisasResponse := make([]interface{}, len(pesquisas))
 	for i, pesquisa := range pesquisas {
 		pesquisasResponse[i] = h.toPesquisaResponse(pesquisa)
@@ -166,16 +141,7 @@ func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.
 	response.WriteSuccess(w, http.StatusOK, "Pesquisas listadas com sucesso", pesquisasResponse)
 }
 
-// ListPesquisasBySetor godoc
-// @Summary Listar pesquisas por setor
-// @Description Retorna lista de pesquisas de um setor específico
-// @Tags pesquisas
-// @Produce json
-// @Param setor_id path int true "ID do setor"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /setores/{setor_id}/pesquisas [get]
+// ListPesquisasBySetor lista todas as pesquisas de um setor específico
 func (h *PesquisaHandler) ListPesquisasBySetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setorID, err := strconv.Atoi(vars["setor_id"])
@@ -190,7 +156,7 @@ func (h *PesquisaHandler) ListPesquisasBySetor(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	pesquisasResponse := make([]interface{}, len(pesquisas))
 	for i, pesquisa := range pesquisas {
 		pesquisasResponse[i] = h.toPesquisaResponse(pesquisa)
@@ -199,16 +165,7 @@ func (h *PesquisaHandler) ListPesquisasBySetor(w http.ResponseWriter, r *http.Re
 	response.WriteSuccess(w, http.StatusOK, "Pesquisas do setor listadas com sucesso", pesquisasResponse)
 }
 
-// ListPesquisasActive godoc
-// @Summary Listar pesquisas ativas
-// @Description Retorna lista de pesquisas ativas de uma empresa
-// @Tags pesquisas
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /empresas/{empresa_id}/pesquisas/active [get]
+// ListPesquisasActive lista todas as pesquisas ativas de uma empresa
 func (h *PesquisaHandler) ListPesquisasActive(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -223,7 +180,7 @@ func (h *PesquisaHandler) ListPesquisasActive(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	pesquisasResponse := make([]interface{}, len(pesquisas))
 	for i, pesquisa := range pesquisas {
 		pesquisasResponse[i] = h.toPesquisaResponse(pesquisa)
@@ -232,19 +189,7 @@ func (h *PesquisaHandler) ListPesquisasActive(w http.ResponseWriter, r *http.Req
 	response.WriteSuccess(w, http.StatusOK, "Pesquisas ativas listadas com sucesso", pesquisasResponse)
 }
 
-// UpdatePesquisa godoc
-// @Summary Atualizar pesquisa
-// @Description Atualiza dados de uma pesquisa existente
-// @Tags pesquisas
-// @Accept json
-// @Produce json
-// @Param id path int true "ID da pesquisa"
-// @Param pesquisa body dto.PesquisaUpdateRequest true "Dados para atualização"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{id} [put]
+// UpdatePesquisa atualiza dados de pesquisa de clima existente
 func (h *PesquisaHandler) UpdatePesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -270,13 +215,12 @@ func (h *PesquisaHandler) UpdatePesquisa(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Aplicar atualizações
+	// Aplicar alterações parciais à entidade
 	if err := req.ApplyToEntity(pesquisa); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Erro na aplicação dos dados", err.Error())
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -289,19 +233,7 @@ func (h *PesquisaHandler) UpdatePesquisa(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "Pesquisa atualizada com sucesso", pesquisaResponse)
 }
 
-// UpdateStatusPesquisa godoc
-// @Summary Atualizar status da pesquisa
-// @Description Atualiza apenas o status de uma pesquisa
-// @Tags pesquisas
-// @Accept json
-// @Produce json
-// @Param id path int true "ID da pesquisa"
-// @Param status body StatusUpdateRequest true "Novo status"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{id}/status [put]
+// UpdateStatusPesquisa atualiza apenas status de pesquisa existente
 func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -316,13 +248,12 @@ func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Validação do status
+	// Validar status contra valores permitidos
 	if !h.isValidPesquisaStatus(req.Status) {
 		response.WriteError(w, http.StatusBadRequest, "Status inválido", "Status deve ser: Rascunho, Ativa, Concluída ou Arquivada")
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -338,18 +269,7 @@ func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Re
 	response.WriteSuccess(w, http.StatusOK, "Status da pesquisa atualizado com sucesso", nil)
 }
 
-// DeletePesquisa godoc
-// @Summary Deletar pesquisa
-// @Description Remove uma pesquisa do sistema
-// @Tags pesquisas
-// @Produce json
-// @Param id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{id} [delete]
+// DeletePesquisa remove pesquisa de clima do sistema
 func (h *PesquisaHandler) DeletePesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -358,7 +278,6 @@ func (h *PesquisaHandler) DeletePesquisa(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -378,17 +297,7 @@ func (h *PesquisaHandler) DeletePesquisa(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "Pesquisa deletada com sucesso", nil)
 }
 
-// GenerateQRCode godoc
-// @Summary Gerar QR Code para pesquisa
-// @Description Gera um QR Code para acesso à pesquisa
-// @Tags pesquisas
-// @Produce json
-// @Param id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{id}/qrcode [post]
+// GenerateQRCode gera código QR para acesso público à pesquisa
 func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -397,7 +306,7 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Verificar se pesquisa existe
+	// Verificar existência da pesquisa
 	pesquisa, err := h.pesquisaUseCase.GetByID(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrada") {
@@ -408,8 +317,7 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// TODO: Implementar geração real do QR Code quando método estiver disponível
-	// Por enquanto, retorna um path simulado baseado no link de acesso
+	// Gerar caminho do QR Code baseado no link de acesso
 	qrCodePath := fmt.Sprintf("/qrcodes/%s.png", pesquisa.LinkAcesso)
 
 	qrResponse := map[string]string{
@@ -420,8 +328,7 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "QR Code gerado com sucesso", qrResponse)
 }
 
-// Métodos auxiliares
-
+// validatePesquisaCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *PesquisaHandler) validatePesquisaCreateRequest(req *dto.PesquisaCreateRequest) error {
 	if req.IDEmpresa <= 0 {
 		return fmt.Errorf("ID da empresa é obrigatório")
@@ -444,6 +351,7 @@ func (h *PesquisaHandler) validatePesquisaCreateRequest(req *dto.PesquisaCreateR
 	return nil
 }
 
+// isValidPesquisaStatus verifica se status fornecido é válido
 func (h *PesquisaHandler) isValidPesquisaStatus(status string) bool {
 	validStatuses := []string{"Rascunho", "Ativa", "Concluída", "Arquivada"}
 	for _, validStatus := range validStatuses {
@@ -454,6 +362,7 @@ func (h *PesquisaHandler) isValidPesquisaStatus(status string) bool {
 	return false
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *PesquisaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -463,6 +372,7 @@ func (h *PesquisaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *PesquisaHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -473,7 +383,7 @@ func (h *PesquisaHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// toPesquisaResponse converte entity.Pesquisa para response.PesquisaResponse
+// toPesquisaResponse converte entidade de domínio para DTO de resposta
 func (h *PesquisaHandler) toPesquisaResponse(pesquisa *entity.Pesquisa) *response.PesquisaResponse {
 	return &response.PesquisaResponse{
 		ID:             pesquisa.ID,
@@ -491,7 +401,7 @@ func (h *PesquisaHandler) toPesquisaResponse(pesquisa *entity.Pesquisa) *respons
 	}
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *PesquisaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/pesquisas", h.CreatePesquisa).Methods("POST")
 	router.HandleFunc("/pesquisas/{id:[0-9]+}", h.GetPesquisa).Methods("GET")

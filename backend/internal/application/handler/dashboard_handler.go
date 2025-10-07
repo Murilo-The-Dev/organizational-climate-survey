@@ -1,3 +1,6 @@
+// Package handler implementa os controladores HTTP do módulo de Dashboards.
+// Responsável por processar requisições, validar entradas e orquestrar casos de uso.
+
 package handler
 
 import (
@@ -14,11 +17,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// DashboardHandler gerencia as rotas e operações HTTP relacionadas a Dashboards
 type DashboardHandler struct {
-	dashboardUseCase *usecase.DashboardUseCase
-	log              logger.Logger
+	dashboardUseCase *usecase.DashboardUseCase // Caso de uso principal para operações de dashboard
+	log              logger.Logger             // Logger para registrar eventos e erros
 }
 
+// NewDashboardHandler instancia um novo handler de dashboard com dependências injetadas
 func NewDashboardHandler(dashboardUseCase *usecase.DashboardUseCase, log logger.Logger) *DashboardHandler {
 	return &DashboardHandler{
 		dashboardUseCase: dashboardUseCase,
@@ -26,22 +31,29 @@ func NewDashboardHandler(dashboardUseCase *usecase.DashboardUseCase, log logger.
 	}
 }
 
+// CreateDashboard cria um novo dashboard no sistema
 func (h *DashboardHandler) CreateDashboard(w http.ResponseWriter, r *http.Request) {
 	var req dto.DashboardCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		// Falha ao decodificar JSON de entrada
 		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
+
+	// Validação de campos obrigatórios e regras de negócio
 	if err := h.validateDashboardCreateRequest(&req); err != nil {
 		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
+
+	// Conversão do DTO para entidade de domínio
 	dashboard := req.ToEntity()
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
+	// Execução do caso de uso de criação
 	if err := h.dashboardUseCase.Create(r.Context(), dashboard, userAdminID, clientIP); err != nil {
 		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar dashboard: %v", err)
 		if strings.Contains(err.Error(), "já existe") {
@@ -51,22 +63,13 @@ func (h *DashboardHandler) CreateDashboard(w http.ResponseWriter, r *http.Reques
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
+
+	// Sucesso na criação
 	h.log.WithFields(map[string]interface{}{"dashboard_id": dashboard.ID, "user_admin_id": userAdminID, "client_ip": clientIP}).Info("Dashboard criado com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Dashboard criado com sucesso", response.ToDashboardResponse(dashboard))
 }
 
-
-// GetDashboard godoc
-// @Summary Buscar dashboard por ID
-// @Description Retorna um dashboard específico pelo ID
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Success 200 {object} response.DashboardResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id} [get]
+// GetDashboard retorna um dashboard específico pelo ID
 func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -75,6 +78,7 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Busca o dashboard pelo ID
 	dashboard, err := h.dashboardUseCase.GetByID(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
@@ -88,17 +92,7 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	response.WriteSuccess(w, http.StatusOK, "Dashboard encontrado", response.ToDashboardResponse(dashboard))
 }
 
-// GetDashboardByPesquisa godoc
-// @Summary Buscar dashboard por pesquisa
-// @Description Retorna o dashboard de uma pesquisa específica (relação 1:1)
-// @Tags dashboards
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.DashboardResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /pesquisas/{pesquisa_id}/dashboard [get]
+// GetDashboardByPesquisa retorna o dashboard vinculado a uma pesquisa específica
 func (h *DashboardHandler) GetDashboardByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -120,16 +114,7 @@ func (h *DashboardHandler) GetDashboardByPesquisa(w http.ResponseWriter, r *http
 	response.WriteSuccess(w, http.StatusOK, "Dashboard da pesquisa encontrado", response.ToDashboardResponse(dashboard))
 }
 
-// ListDashboardsByEmpresa godoc
-// @Summary Listar dashboards por empresa
-// @Description Retorna lista de dashboards de uma empresa específica
-// @Tags dashboards
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Success 200 {object} response.ListResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/dashboards [get]
+// ListDashboardsByEmpresa lista todos os dashboards associados a uma empresa
 func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -144,7 +129,7 @@ func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Converter para response
+	// Conversão para DTOs de resposta
 	dashboardsResponse := make([]interface{}, len(dashboards))
 	for i, dashboard := range dashboards {
 		dashboardsResponse[i] = response.ToDashboardResponse(dashboard)
@@ -153,19 +138,7 @@ func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Dashboards listados com sucesso", dashboardsResponse)
 }
 
-// UpdateDashboard godoc
-// @Summary Atualizar dashboard
-// @Description Atualiza dados de um dashboard existente
-// @Tags dashboards
-// @Accept json
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Param dashboard body dto.DashboardUpdateRequest true "Dados para atualização"
-// @Success 200 {object} response.DashboardResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id} [put]
+// UpdateDashboard atualiza dados de um dashboard existente
 func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -180,7 +153,7 @@ func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Buscar dashboard existente
+	// Recupera o dashboard atual
 	dashboard, err := h.dashboardUseCase.GetByID(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
@@ -191,10 +164,9 @@ func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Aplicar atualizações
+	// Aplica modificações
 	req.ApplyToEntity(dashboard)
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -206,17 +178,7 @@ func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Reques
 	response.WriteSuccess(w, http.StatusOK, "Dashboard atualizado com sucesso", response.ToDashboardResponse(dashboard))
 }
 
-// DeleteDashboard godoc
-// @Summary Deletar dashboard
-// @Description Remove um dashboard do sistema
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Success 200 {object} response.SuccessResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id} [delete]
+// DeleteDashboard remove um dashboard do sistema
 func (h *DashboardHandler) DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -225,7 +187,6 @@ func (h *DashboardHandler) DeleteDashboard(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -241,18 +202,7 @@ func (h *DashboardHandler) DeleteDashboard(w http.ResponseWriter, r *http.Reques
 	response.WriteSuccess(w, http.StatusOK, "Dashboard deletado com sucesso", nil)
 }
 
-// GetDashboardData godoc
-// @Summary Obter dados do dashboard
-// @Description Retorna dados processados e métricas do dashboard
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Param filters query string false "Filtros JSON para aplicar aos dados"
-// @Success 200 {object} response.DashboardDataResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id}/data [get]
+// GetDashboardData retorna dados e métricas processadas do dashboard
 func (h *DashboardHandler) GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -262,7 +212,7 @@ func (h *DashboardHandler) GetDashboardData(w http.ResponseWriter, r *http.Reque
 	}
 
 	filters := r.URL.Query().Get("filters")
-	
+
 	dashboardData, err := h.dashboardUseCase.GetDashboardData(r.Context(), id, filters)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
@@ -276,17 +226,7 @@ func (h *DashboardHandler) GetDashboardData(w http.ResponseWriter, r *http.Reque
 	response.WriteSuccess(w, http.StatusOK, "Dados do dashboard obtidos com sucesso", dashboardData)
 }
 
-// RefreshDashboard godoc
-// @Summary Atualizar dados do dashboard
-// @Description Força a atualização dos dados e métricas do dashboard
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Success 200 {object} response.SuccessResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id}/refresh [post]
+// RefreshDashboard força atualização dos dados e métricas de um dashboard
 func (h *DashboardHandler) RefreshDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -295,7 +235,6 @@ func (h *DashboardHandler) RefreshDashboard(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -311,18 +250,7 @@ func (h *DashboardHandler) RefreshDashboard(w http.ResponseWriter, r *http.Reque
 	response.WriteSuccess(w, http.StatusOK, "Dashboard atualizado com sucesso", nil)
 }
 
-// ExportDashboard godoc
-// @Summary Exportar dashboard
-// @Description Exporta os dados do dashboard em formato específico
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Param format query string false "Formato de exportação (pdf, excel)" default(pdf)
-// @Success 200 {object} response.ExportResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id}/export [get]
+// ExportDashboard exporta o dashboard em PDF, Excel ou CSV
 func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -341,7 +269,6 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -355,7 +282,7 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Definir headers apropriados para download
+	// Configuração dos headers de resposta conforme o tipo de exportação
 	switch format {
 	case "pdf":
 		w.Header().Set("Content-Type", "application/pdf")
@@ -368,22 +295,11 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=dashboard_%d.csv", id))
 	}
 
-	// Escrever dados diretamente na response para download
 	w.WriteHeader(http.StatusOK)
 	w.Write(exportData)
 }
 
-// GetDashboardMetrics godoc
-// @Summary Obter métricas do dashboard
-// @Description Retorna métricas resumidas do dashboard
-// @Tags dashboards
-// @Produce json
-// @Param id path int true "ID do dashboard"
-// @Success 200 {object} response.MetricsResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /dashboards/{id}/metrics [get]
+// GetDashboardMetrics retorna métricas resumidas de um dashboard
 func (h *DashboardHandler) GetDashboardMetrics(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -405,8 +321,7 @@ func (h *DashboardHandler) GetDashboardMetrics(w http.ResponseWriter, r *http.Re
 	response.WriteSuccess(w, http.StatusOK, "Métricas do dashboard obtidas com sucesso", metrics)
 }
 
-// Métodos auxiliares
-
+// validateDashboardCreateRequest valida regras de negócio e obrigatoriedade de campos
 func (h *DashboardHandler) validateDashboardCreateRequest(req *dto.DashboardCreateRequest) error {
 	if req.IDPesquisa <= 0 {
 		return fmt.Errorf("ID da pesquisa é obrigatório")
@@ -423,6 +338,7 @@ func (h *DashboardHandler) validateDashboardCreateRequest(req *dto.DashboardCrea
 	return nil
 }
 
+// isValidExportFormat valida se o formato de exportação é aceito
 func (h *DashboardHandler) isValidExportFormat(format string) bool {
 	validFormats := []string{"pdf", "xlsx", "csv"}
 	for _, validFormat := range validFormats {
@@ -433,6 +349,7 @@ func (h *DashboardHandler) isValidExportFormat(format string) bool {
 	return false
 }
 
+// getUserAdminIDFromContext obtém o ID do usuário administrativo autenticado
 func (h *DashboardHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -442,6 +359,7 @@ func (h *DashboardHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP identifica o IP real do cliente, considerando cabeçalhos de proxy
 func (h *DashboardHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -452,7 +370,7 @@ func (h *DashboardHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes associa todas as rotas HTTP deste handler
 func (h *DashboardHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/dashboards", h.CreateDashboard).Methods("POST")
 	router.HandleFunc("/dashboards/{id:[0-9]+}", h.GetDashboard).Methods("GET")
