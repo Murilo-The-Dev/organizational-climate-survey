@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "../styles/globals.css";
+import "../../styles/globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -13,26 +13,20 @@ const interMono = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Atmos",
-  description: "Monitorando o clima organizacional da sua empresa",
-  icons: {
-    icon: "./public/images/logoAtmos.svg",
-  },
+  title: "Atmos - Login",
+  description: "Página de Login da plataforma Atmos",
 };
 
-export default function RootLayout({
+export default function LoginLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html lang="pt-BR">
-      <body
-        className={`${inter.variable} ${interMono.variable} antialiased bg-zinc-50`}
-      >
+      <body className={`${inter.variable} ${interMono.variable} antialiased bg-zinc-50`}>
         {children}
       </body>
     </html>
   );
 }
-
