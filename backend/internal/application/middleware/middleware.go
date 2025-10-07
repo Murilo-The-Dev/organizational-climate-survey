@@ -1,3 +1,5 @@
+// Package middleware fornece componentes intermediários para processamento de requisições.
+// Implementa autenticação, autorização e validações de segurança da aplicação.
 package middleware
 
 import (
@@ -11,17 +13,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Middleware de CORS
+// CORSMiddleware configura políticas de compartilhamento de recursos entre origens
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Permitir todas as origens (em produção, especificar origens específicas)
+		// Configurar headers CORS para acesso cross-origin
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Type")
-		w.Header().Set("Access-Control-Max-Age", "86400") // 24 horas
+		w.Header().Set("Access-Control-Max-Age", "86400")
 
-		// Responder a requisições OPTIONS (preflight)
+		// Responder requisições preflight
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -31,10 +33,10 @@ func CORSMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Middleware de logging
+// LoggingMiddleware registra informações básicas de cada requisição
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Log básico da requisição
+		// Registrar método, rota, IP e user agent
 		fmt.Printf("[%s] %s %s - %s\n", 
 			r.Method, 
 			r.URL.Path, 
@@ -46,7 +48,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Middleware de autenticação JWT
+// JWTAuthMiddleware valida tokens JWT e injeta dados do usuário no contexto
 func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +59,7 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Verificar formato "Bearer <token>"
+			// Validar formato Bearer
 			tokenParts := strings.Split(authHeader, " ")
 			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
 				response.WriteError(w, http.StatusUnauthorized, "Formato de token inválido", "Use: Bearer <token>")
@@ -66,7 +68,7 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 
 			tokenString := tokenParts[1]
 
-			// Validar token JWT
+			// Parsear e validar token JWT
 			token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("método de assinatura inesperado: %v", token.Header["alg"])
@@ -80,12 +82,11 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 			}
 
 			if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-				// Adicionar informações do usuário ao contexto
+				// Injetar dados do usuário no contexto da requisição
 				ctx := context.WithValue(r.Context(), "user_admin_id", claims.UserID)
 				ctx = context.WithValue(ctx, "empresa_id", claims.EmpresaID)
 				ctx = context.WithValue(ctx, "user_email", claims.Email)
 				
-				// Continuar com o contexto atualizado
 				next.ServeHTTP(w, r.WithContext(ctx))
 			} else {
 				response.WriteError(w, http.StatusUnauthorized, "Token inválido", "Claims inválidas")
@@ -95,37 +96,33 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 	}
 }
 
-// Middleware de autorização por empresa
+// EmpresaAuthMiddleware valida autorização de acesso a recursos da empresa
 func EmpresaAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Este middleware verifica se o usuário tem acesso aos recursos da empresa
-		// Pode ser usado em rotas que incluem empresa_id nos parâmetros
-		
+		// Verificar presença de informações de empresa no contexto
 		userEmpresaID := r.Context().Value("empresa_id")
 		if userEmpresaID == nil {
 			response.WriteError(w, http.StatusUnauthorized, "Contexto inválido", "Informações de empresa não encontradas")
 			return
 		}
 
-		// Aqui poderia ser implementada lógica adicional de autorização
-		// Por exemplo, verificar se o usuário tem permissão para acessar recursos de outras empresas
+		// Ponto de extensão para validações adicionais de autorização
 		
 		next.ServeHTTP(w, r)
 	})
 }
 
-// Middleware de rate limiting básico
+// RateLimitMiddleware implementa controle de taxa de requisições
 func RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Implementação básica de rate limiting
-		// Em produção, usar uma solução mais robusta como Redis
+		// Implementação placeholder para rate limiting
+		// Produção requer solução robusta com Redis ou similar
 		
-		// Por enquanto, apenas passa adiante
 		next.ServeHTTP(w, r)
 	})
 }
 
-// Middleware de validação de Content-Type para requisições POST/PUT
+// ContentTypeMiddleware valida Content-Type JSON em requisições de escrita
 func ContentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" || r.Method == "PUT" {
@@ -140,7 +137,7 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Middleware de recuperação de panic
+// RecoveryMiddleware captura panics e retorna erro controlado
 func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -154,10 +151,10 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Middleware para rotas públicas (sem autenticação)
+// PublicRouteMiddleware adiciona headers de segurança para rotas públicas
 func PublicRouteMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Adicionar headers de segurança básicos
+		// Configurar headers de segurança básicos
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
@@ -166,19 +163,17 @@ func PublicRouteMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Middleware para validar se a pesquisa está ativa (para submissão de respostas)
+// ActiveSurveyMiddleware valida se pesquisa aceita novas respostas
 func ActiveSurveyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Este middleware seria usado na rota de submissão de respostas
-		// para verificar se a pesquisa está ativa e aceita respostas
+		// Ponto de extensão para validação de status da pesquisa
+		// Validação real implementada no use case
 		
-		// Por enquanto, apenas passa adiante
-		// A validação real seria feita no use case
 		next.ServeHTTP(w, r)
 	})
 }
 
-// Função auxiliar para aplicar múltiplos middlewares
+// ChainMiddleware compõe múltiplos middlewares em ordem de execução
 func ChainMiddleware(middlewares ...func(http.Handler) http.Handler) func(http.Handler) http.Handler {
 	return func(final http.Handler) http.Handler {
 		for i := len(middlewares) - 1; i >= 0; i-- {
@@ -188,9 +183,7 @@ func ChainMiddleware(middlewares ...func(http.Handler) http.Handler) func(http.H
 	}
 }
 
-// Configuração de middlewares para diferentes tipos de rotas
-
-// Middlewares para rotas públicas
+// PublicMiddlewares retorna cadeia de middlewares para rotas públicas
 func PublicMiddlewares() func(http.Handler) http.Handler {
 	return ChainMiddleware(
 		RecoveryMiddleware,
@@ -201,7 +194,7 @@ func PublicMiddlewares() func(http.Handler) http.Handler {
 	)
 }
 
-// Middlewares para rotas autenticadas
+// AuthenticatedMiddlewares retorna cadeia de middlewares para rotas autenticadas
 func AuthenticatedMiddlewares(jwtSecret []byte) func(http.Handler) http.Handler {
 	return ChainMiddleware(
 		RecoveryMiddleware,
@@ -214,7 +207,7 @@ func AuthenticatedMiddlewares(jwtSecret []byte) func(http.Handler) http.Handler 
 	)
 }
 
-// Middlewares para rotas administrativas (com validações extras)
+// AdminMiddlewares retorna cadeia de middlewares para rotas administrativas
 func AdminMiddlewares(jwtSecret []byte) func(http.Handler) http.Handler {
 	return ChainMiddleware(
 		RecoveryMiddleware,
@@ -224,11 +217,10 @@ func AdminMiddlewares(jwtSecret []byte) func(http.Handler) http.Handler {
 		ContentTypeMiddleware,
 		JWTAuthMiddleware(jwtSecret),
 		EmpresaAuthMiddleware,
-		// Aqui poderiam ser adicionados middlewares específicos para admins
 	)
 }
 
-// Middlewares para submissão de respostas (público, mas com validações específicas)
+// SurveySubmissionMiddlewares retorna cadeia de middlewares para submissão de respostas
 func SurveySubmissionMiddlewares() func(http.Handler) http.Handler {
 	return ChainMiddleware(
 		RecoveryMiddleware,

@@ -1,3 +1,4 @@
+// Package main inicializa a aplicação, conectando ao banco, configurando repositórios, use cases e servidor HTTP.
 package main
 
 import (
@@ -15,21 +16,20 @@ import (
 )
 
 func main() {
+	// Carrega variáveis de ambiente do .env, se existir
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Aviso: Não foi possível encontrar o arquivo .env, usando variáveis de ambiente do sistema.")
 	}
 
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	// Configuração da porta e JWT
+	port := getEnvWithDefault("APP_PORT", "8080")
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET não configurado nas variáveis de ambiente")
 	}
 
+	// Configuração e conexão com o banco de dados
 	dbConfig := &postgres.Config{
 		Host:     getEnvWithDefault("DB_HOST", "localhost"),
 		Port:     getEnvWithDefault("DB_PORT", "5432"),
@@ -38,7 +38,6 @@ func main() {
 		DBName:   getEnvWithDefault("DB_NAME", "Atmos"),
 		SSLMode:  getEnvWithDefault("DB_SSLMODE", "disable"),
 	}
-
 	if dbConfig.Password == "" {
 		log.Fatal("DB_PASS não configurado nas variáveis de ambiente")
 	}
@@ -48,16 +47,17 @@ func main() {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
 	defer db.Close()
-
 	log.Println("✅ Conexão com banco de dados estabelecida")
 
+	// Inicializa repositórios
 	repos := postgres.NewRepositories(db)
 	log.Println("✅ Repositórios inicializados")
 
-	// Inicializar crypto service
+	// Inicializa serviço de criptografia
 	cryptoSvc := crypto.NewDefaultCryptoService()
 	log.Println("✅ Crypto service inicializado")
 
+	// Inicializa Use Cases
 	var empresaUseCase *usecase.EmpresaUseCase
 	if repos.Empresa != nil && repos.LogAuditoria != nil {
 		empresaUseCase = usecase.NewEmpresaUseCase(repos.Empresa, repos.LogAuditoria)
@@ -102,9 +102,9 @@ func main() {
 	if repos.Dashboard != nil && repos.Pesquisa != nil && repos.Empresa != nil && repos.LogAuditoria != nil {
 		dashboardUseCase = usecase.NewDashboardUseCase(repos.Dashboard, repos.Pesquisa, repos.Empresa, repos.LogAuditoria)
 	}
-
 	log.Println("✅ Use cases inicializados")
 
+	// Configuração do router HTTP
 	routerConfig := &httpRouter.RouterConfig{
 		EmpresaUseCase:              empresaUseCase,
 		UsuarioAdministradorUseCase: usuarioUseCase,
@@ -116,10 +116,10 @@ func main() {
 		LogAuditoriaUseCase:         logUseCase,
 		JWTSecret:                   jwtSecret,
 	}
-
 	router := httpRouter.SetupRouter(routerConfig)
 	log.Println("✅ Router configurado")
 
+	// Inicializa servidor HTTP
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
@@ -127,11 +127,10 @@ func main() {
 
 	appName := getEnvWithDefault("APP_NAME", "organizational-climate-survey")
 	appEnv := getEnvWithDefault("APP_ENV", "development")
-	
+
 	fmt.Printf("🚀 Servidor '%s' iniciado na porta %s em modo '%s'\n", appName, port, appEnv)
 	fmt.Printf("🔗 API Base URL: http://localhost:%s/api/v1\n", port)
 	fmt.Printf("📊 Health Check: http://localhost:%s/health\n", port)
-	
 	if appEnv == "development" {
 		fmt.Printf("📚 Documentação: http://localhost:%s/docs/\n", port)
 	}
@@ -139,6 +138,7 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
+// getEnvWithDefault retorna o valor de uma variável de ambiente ou um valor padrão caso não esteja definida.
 func getEnvWithDefault(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

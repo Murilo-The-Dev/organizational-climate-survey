@@ -1,5 +1,5 @@
-// Package logger provides a structured logging interface with configurable levels,
-// context support, and field injection for observability in production systems.
+// Package logger implementa um sistema de logging estruturado com suporte a níveis,
+// contexto e campos customizáveis para observabilidade em sistemas em produção.
 package logger
 
 import (
@@ -12,22 +12,22 @@ import (
 	"time"
 )
 
-// Level represents the severity level of a log message
+// Level representa o nível de severidade de uma mensagem de log
 type Level int
 
-// Log levels in ascending order of severity
+// Níveis de log em ordem crescente de severidade
 const (
-	DebugLevel Level = iota // Detailed information for debugging
-	InfoLevel              // General operational messages
-	WarnLevel              // Warning messages for unexpected conditions
-	ErrorLevel             // Error messages for failures
-	FatalLevel             // Critical errors that cause program termination
+	DebugLevel Level = iota // Informações detalhadas para depuração
+	InfoLevel               // Mensagens operacionais gerais
+	WarnLevel               // Avisos sobre condições inesperadas
+	ErrorLevel              // Erros que não causam falha total
+	FatalLevel              // Erros críticos que encerram o programa
 )
 
-// levelNames provides string representation for each log level
+// levelNames fornece a representação em texto para cada nível de log
 var levelNames = []string{"DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
 
-// String returns the string representation of a log level
+// String retorna a representação em texto do nível de log
 func (l Level) String() string {
 	if l >= DebugLevel && l <= FatalLevel {
 		return levelNames[l]
@@ -35,8 +35,8 @@ func (l Level) String() string {
 	return "UNKNOWN"
 }
 
-// ParseLevel converts a string to its corresponding Level
-// Returns InfoLevel for unrecognized strings as safe default
+// ParseLevel converte uma string para seu nível correspondente
+// Retorna InfoLevel para strings não reconhecidas como padrão seguro
 func ParseLevel(s string) Level {
 	switch strings.ToLower(s) {
 	case "debug":
@@ -54,45 +54,45 @@ func ParseLevel(s string) Level {
 	}
 }
 
-// Logger defines the interface for structured logging operations
-// Supports field injection, context propagation, and multiple log levels
+// Logger define a interface para operações de logging estruturado
+// Suporta injeção de campos, propagação de contexto e múltiplos níveis
 type Logger interface {
-	Debug(msg string, args ...interface{}) // Log debug-level messages
-	Info(msg string, args ...interface{})  // Log informational messages
-	Warn(msg string, args ...interface{})  // Log warning messages
-	Error(msg string, args ...interface{}) // Log error messages
-	Fatal(msg string, args ...interface{}) // Log fatal messages and exit
-	WithFields(fields map[string]interface{}) Logger // Add structured fields
-	WithContext(ctx context.Context) Logger           // Add context for tracing
+	Debug(msg string, args ...interface{})           // Registra mensagens de depuração
+	Info(msg string, args ...interface{})            // Registra mensagens informativas
+	Warn(msg string, args ...interface{})            // Registra mensagens de aviso
+	Error(msg string, args ...interface{})           // Registra mensagens de erro
+	Fatal(msg string, args ...interface{})           // Registra erros fatais e encerra
+	WithFields(fields map[string]interface{}) Logger // Adiciona campos estruturados
+	WithContext(ctx context.Context) Logger          // Adiciona contexto para rastreamento
 }
 
-// Config holds logger configuration parameters
+// Config armazena os parâmetros de configuração do logger
 type Config struct {
-	Level      Level     // Minimum level to log
-	Output     io.Writer // Destination for log output
-	TimeFormat string    // Time format for timestamps
-	AddCaller  bool      // Whether to include caller information
+	Level      Level     // Nível mínimo para logar
+	Output     io.Writer // Destino para saída dos logs
+	TimeFormat string    // Formato de data/hora para timestamps
+	AddCaller  bool      // Se deve incluir informações do caller (arquivo:linha)
 }
 
-// DefaultConfig returns a sensible default configuration
+// DefaultConfig retorna uma configuração padrão sensata para o logger
 func DefaultConfig() *Config {
 	return &Config{
 		Level:      InfoLevel,
 		Output:     os.Stdout,
-		TimeFormat: time.RFC3339, // ISO 8601 format for machine readability
-		AddCaller:  true,         // Include file:line for debugging
+		TimeFormat: time.RFC3339, // Formato ISO 8601 para legibilidade por máquina
+		AddCaller:  true,         // Inclui arquivo:linha para depuração
 	}
 }
 
-// logger is the concrete implementation of the Logger interface
+// logger é a implementação concreta da interface Logger
 type logger struct {
-	config *Config                 // Logger configuration
-	fields map[string]interface{} // Structured fields to include in logs
-	ctx    context.Context        // Context for request tracing
+	config *Config                // Configuração do logger
+	fields map[string]interface{} // Campos estruturados para incluir nos logs
+	ctx    context.Context        // Contexto para rastreamento de requisições
 }
 
-// New creates a new Logger instance with the provided configuration
-// Uses DefaultConfig() if config is nil
+// New cria uma nova instância do Logger com a configuração fornecida
+// Usa DefaultConfig() se config for nil
 func New(config *Config) Logger {
 	if config == nil {
 		config = DefaultConfig()
@@ -103,63 +103,63 @@ func New(config *Config) Logger {
 	}
 }
 
-// shouldLog determines if a message should be logged based on level filtering
+// shouldLog determina se uma mensagem deve ser logada com base na filtragem de nível
 func (l *logger) shouldLog(level Level) bool {
 	return level >= l.config.Level
 }
 
-// log is the core logging method that formats and outputs log messages
-// Handles level filtering, timestamp formatting, caller info, and structured fields
+// log é o método central de logging que formata e envia mensagens
+// Gerencia filtragem de nível, formatação de timestamp, info do caller e campos estruturados
 func (l *logger) log(level Level, msg string, args ...interface{}) {
 	if !l.shouldLog(level) {
 		return
 	}
-	
+
 	timestamp := time.Now().Format(l.config.TimeFormat)
 	levelStr := level.String()
-	
+
 	// Format message with printf-style arguments
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
-	
+
 	// Build structured log line
 	var logLine strings.Builder
 	logLine.WriteString(fmt.Sprintf("[%s] %s", levelStr, timestamp))
-	
+
 	// Add caller information for debugging (skips 3 frames to get actual caller)
 	if l.config.AddCaller {
 		if _, file, line, ok := runtime.Caller(3); ok {
 			logLine.WriteString(fmt.Sprintf(" %s:%d", getFileName(file), line))
 		}
 	}
-	
+
 	// Add structured fields if present
 	if len(l.fields) > 0 {
 		logLine.WriteString(" fields=")
 		logLine.WriteString(fmt.Sprintf("%+v", l.fields))
 	}
-	
+
 	// Extract common context values for request tracing
 	if l.ctx != nil {
 		if requestID := l.ctx.Value("request_id"); requestID != nil {
 			logLine.WriteString(fmt.Sprintf(" request_id=%v", requestID))
 		}
 	}
-	
+
 	logLine.WriteString(fmt.Sprintf(" msg=\"%s\"\n", msg))
-	
+
 	// Write to configured output destination
 	fmt.Fprint(l.config.Output, logLine.String())
-	
+
 	// Fatal level triggers process termination
 	if level == FatalLevel {
 		os.Exit(1)
 	}
 }
 
-// getFileName extracts just the filename from a full path
-// Used to keep caller info concise
+// getFileName extrai apenas o nome do arquivo de um caminho completo
+// Usado para manter informações do caller concisas
 func getFileName(path string) string {
 	parts := strings.Split(path, "/")
 	if len(parts) > 0 {
@@ -168,35 +168,35 @@ func getFileName(path string) string {
 	return path
 }
 
-// Level-specific logging methods for convenience and type safety
+// Métodos específicos para cada nível de log, para conveniência e type safety
 
-// Debug logs debug-level messages, typically for detailed troubleshooting
+// Debug registra mensagens de nível debug, tipicamente para troubleshooting detalhado
 func (l *logger) Debug(msg string, args ...interface{}) {
 	l.log(DebugLevel, msg, args...)
 }
 
-// Info logs informational messages for normal operation tracking
+// Info registra mensagens informativas para acompanhamento da operação normal
 func (l *logger) Info(msg string, args ...interface{}) {
 	l.log(InfoLevel, msg, args...)
 }
 
-// Warn logs warning messages for unexpected but recoverable conditions
+// Warn registra mensagens de aviso para condições inesperadas mas recuperáveis
 func (l *logger) Warn(msg string, args ...interface{}) {
 	l.log(WarnLevel, msg, args...)
 }
 
-// Error logs error messages for failures that don't terminate the program
+// Error registra mensagens de erro para falhas que não terminam o programa
 func (l *logger) Error(msg string, args ...interface{}) {
 	l.log(ErrorLevel, msg, args...)
 }
 
-// Fatal logs critical error messages and terminates the program
+// Fatal registra mensagens de erro crítico e termina o programa
 func (l *logger) Fatal(msg string, args ...interface{}) {
 	l.log(FatalLevel, msg, args...)
 }
 
-// WithFields creates a new logger instance with additional structured fields
-// Fields are merged with existing fields, with new fields taking precedence
+// WithFields cria uma nova instância do logger com campos estruturados adicionais
+// Os campos são mesclados com os existentes, com novos campos tendo precedência
 func (l *logger) WithFields(fields map[string]interface{}) Logger {
 	newFields := make(map[string]interface{})
 	// Copy existing fields
@@ -207,7 +207,7 @@ func (l *logger) WithFields(fields map[string]interface{}) Logger {
 	for k, v := range fields {
 		newFields[k] = v
 	}
-	
+
 	return &logger{
 		config: l.config,
 		fields: newFields,
@@ -215,8 +215,8 @@ func (l *logger) WithFields(fields map[string]interface{}) Logger {
 	}
 }
 
-// WithContext creates a new logger instance with attached context
-// Useful for request tracing and distributed logging correlation
+// WithContext cria uma nova instância do logger com contexto anexado
+// Útil para rastreamento de requisições e correlação de logs distribuídos
 func (l *logger) WithContext(ctx context.Context) Logger {
 	return &logger{
 		config: l.config,
@@ -225,14 +225,14 @@ func (l *logger) WithContext(ctx context.Context) Logger {
 	}
 }
 
-// NoopLogger is a logger implementation that discards all log messages
-// Useful for testing or when logging needs to be disabled
+// NoopLogger é uma implementação do logger que descarta todas as mensagens
+// Útil para testes ou quando o logging precisa ser desabilitado
 type NoopLogger struct{}
 
-func (n NoopLogger) Debug(msg string, args ...interface{})                     {}
-func (n NoopLogger) Info(msg string, args ...interface{})                      {}
-func (n NoopLogger) Warn(msg string, args ...interface{})                      {}
-func (n NoopLogger) Error(msg string, args ...interface{})                     {}
-func (n NoopLogger) Fatal(msg string, args ...interface{})                     {}
-func (n NoopLogger) WithFields(fields map[string]interface{}) Logger           { return n }
-func (n NoopLogger) WithContext(ctx context.Context) Logger                    { return n }
+func (n NoopLogger) Debug(msg string, args ...interface{})           {}
+func (n NoopLogger) Info(msg string, args ...interface{})            {}
+func (n NoopLogger) Warn(msg string, args ...interface{})            {}
+func (n NoopLogger) Error(msg string, args ...interface{})           {}
+func (n NoopLogger) Fatal(msg string, args ...interface{})           {}
+func (n NoopLogger) WithFields(fields map[string]interface{}) Logger { return n }
+func (n NoopLogger) WithContext(ctx context.Context) Logger          { return n }

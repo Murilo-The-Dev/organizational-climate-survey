@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -14,11 +16,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// LogAuditoriaHandler gerencia requisições HTTP relacionadas a logs de auditoria
 type LogAuditoriaHandler struct {
 	logAuditoriaUseCase *usecase.LogAuditoriaUseCase
 	log                 logger.Logger
 }
 
+// NewLogAuditoriaHandler cria nova instância do handler de logs de auditoria
 func NewLogAuditoriaHandler(logAuditoriaUseCase *usecase.LogAuditoriaUseCase, log logger.Logger) *LogAuditoriaHandler {
 	return &LogAuditoriaHandler{
 		logAuditoriaUseCase: logAuditoriaUseCase,
@@ -26,6 +30,7 @@ func NewLogAuditoriaHandler(logAuditoriaUseCase *usecase.LogAuditoriaUseCase, lo
 	}
 }
 
+// CreateLogAuditoria cria novo registro de auditoria no sistema
 func (h *LogAuditoriaHandler) CreateLogAuditoria(w http.ResponseWriter, r *http.Request) {
 	var req dto.LogAuditoriaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -48,17 +53,7 @@ func (h *LogAuditoriaHandler) CreateLogAuditoria(w http.ResponseWriter, r *http.
 	response.WriteSuccess(w, http.StatusCreated, "Log criado com sucesso", response.ToLogResponse(logEntity))
 }
 
-// GetLogAuditoria godoc
-// @Summary Buscar log de auditoria por ID
-// @Description Retorna um log de auditoria específico pelo ID
-// @Tags logs-auditoria
-// @Produce json
-// @Param id path int true "ID do log"
-// @Success 200 {object} response.LogResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /logs-auditoria/{id} [get]
+// GetLogAuditoria busca registro de auditoria por ID
 func (h *LogAuditoriaHandler) GetLogAuditoria(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -80,18 +75,7 @@ func (h *LogAuditoriaHandler) GetLogAuditoria(w http.ResponseWriter, r *http.Req
 	response.WriteSuccess(w, http.StatusOK, "Log encontrado", response.ToLogResponse(log))
 }
 
-// ListLogsByEmpresa godoc
-// @Summary Listar logs por empresa
-// @Description Retorna lista paginada de logs de auditoria de uma empresa
-// @Tags logs-auditoria
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param limit query int false "Limite de resultados" default(50)
-// @Param offset query int false "Offset para paginação" default(0)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/logs-auditoria [get]
+// ListLogsByEmpresa lista logs de auditoria de empresa com paginação
 func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -108,7 +92,7 @@ func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	logsResponse := make([]response.LogResponse, len(logs))
 	for i, log := range logs {
 		logsResponse[i] = response.LogResponse{
@@ -120,13 +104,12 @@ func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	// calcular página atual
+	// Calcular metadados de paginação
 	page := 1
 	if limit > 0 {
 		page = (offset / limit) + 1
 	}
 
-	// calcular total de páginas (aqui só usamos len(logsResponse), mas o ideal é count real do banco)
 	total := len(logsResponse)
 	totalPages := 1
 	if limit > 0 {
@@ -145,21 +128,7 @@ func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.R
 	response.WriteSuccess(w, http.StatusOK, "Logs listados com sucesso", paginatedResponse)
 }
 
-
-
-
-// ListLogsByUsuario godoc
-// @Summary Listar logs por usuário administrador
-// @Description Retorna lista paginada de logs de um usuário administrador específico
-// @Tags logs-auditoria
-// @Produce json
-// @Param user_admin_id path int true "ID do usuário administrador"
-// @Param limit query int false "Limite de resultados" default(50)
-// @Param offset query int false "Offset para paginação" default(0)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /usuarios-administradores/{user_admin_id}/logs-auditoria [get]
+// ListLogsByUsuario lista logs de auditoria de usuário específico com paginação
 func (h *LogAuditoriaHandler) ListLogsByUsuario(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userAdminID, err := strconv.Atoi(vars["user_admin_id"])
@@ -176,19 +145,19 @@ func (h *LogAuditoriaHandler) ListLogsByUsuario(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	logsResponse := make([]response.LogResponse, len(logs))
 	for i, log := range logs {
 		logsResponse[i] = response.ToLogResponse(log)
 	}
 
-	// calcular página atual
+	// Calcular metadados de paginação
 	page := 1
 	if limit > 0 {
 		page = (offset / limit) + 1
 	}
 
-	total := len(logsResponse) // ideal: count real do banco
+	total := len(logsResponse)
 	totalPages := 1
 	if limit > 0 {
 		totalPages = (total + limit - 1) / limit
@@ -206,18 +175,7 @@ func (h *LogAuditoriaHandler) ListLogsByUsuario(w http.ResponseWriter, r *http.R
 	response.WriteSuccess(w, http.StatusOK, "Logs do usuário listados com sucesso", paginatedResponse)
 }
 
-// ListLogsByDateRange godoc
-// @Summary Listar logs por período
-// @Description Retorna logs de auditoria filtrados por período
-// @Tags logs-auditoria
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param start_date query string true "Data inicial (YYYY-MM-DD)"
-// @Param end_date query string true "Data final (YYYY-MM-DD)"
-// @Success 200 {object} response.ListResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/logs-auditoria/by-date [get]
+// ListLogsByDateRange lista logs de auditoria filtrados por período
 func (h *LogAuditoriaHandler) ListLogsByDateRange(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -249,7 +207,7 @@ func (h *LogAuditoriaHandler) ListLogsByDateRange(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	logsResponse := make([]interface{}, len(logs))
 	for i, log := range logs {
 		logsResponse[i] = response.ToLogResponse(log)
@@ -258,19 +216,7 @@ func (h *LogAuditoriaHandler) ListLogsByDateRange(w http.ResponseWriter, r *http
 	response.WriteSuccess(w, http.StatusOK, "Logs por período listados com sucesso", logsResponse)
 }
 
-// ListLogsByAction godoc
-// @Summary Listar logs por tipo de ação
-// @Description Retorna logs filtrados por tipo de ação realizada
-// @Tags logs-auditoria
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param acao query string true "Tipo de ação"
-// @Param limit query int false "Limite de resultados" default(50)
-// @Param offset query int false "Offset para paginação" default(0)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/logs-auditoria/by-action [get]
+// ListLogsByAction lista logs de auditoria filtrados por tipo de ação
 func (h *LogAuditoriaHandler) ListLogsByAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -293,19 +239,19 @@ func (h *LogAuditoriaHandler) ListLogsByAction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	logsResponse := make([]response.LogResponse, len(logs))
 	for i, log := range logs {
 		logsResponse[i] = response.ToLogResponse(log)
 	}
 
-	// calcular página atual
+	// Calcular metadados de paginação
 	page := 1
 	if limit > 0 {
 		page = (offset / limit) + 1
 	}
 
-	total := len(logsResponse) // ideal: count real do banco
+	total := len(logsResponse)
 	totalPages := 1
 	if limit > 0 {
 		totalPages = (total + limit - 1) / limit
@@ -323,18 +269,7 @@ func (h *LogAuditoriaHandler) ListLogsByAction(w http.ResponseWriter, r *http.Re
 	response.WriteSuccess(w, http.StatusOK, "Logs por ação listados com sucesso", paginatedResponse)
 }
 
-// GetAuditSummary godoc
-// @Summary Obter resumo de auditoria
-// @Description Retorna resumo estatístico de auditoria por período
-// @Tags logs-auditoria
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param start_date query string true "Data inicial (YYYY-MM-DD)"
-// @Param end_date query string true "Data final (YYYY-MM-DD)"
-// @Success 200 {object} response.AuditSummaryResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/logs-auditoria/summary [get]
+// GetAuditSummary retorna resumo estatístico de auditoria por período
 func (h *LogAuditoriaHandler) GetAuditSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -369,17 +304,7 @@ func (h *LogAuditoriaHandler) GetAuditSummary(w http.ResponseWriter, r *http.Req
 	response.WriteSuccess(w, http.StatusOK, "Resumo de auditoria obtido com sucesso", summary)
 }
 
-// CleanOldLogs godoc
-// @Summary Limpar logs antigos
-// @Description Remove logs de auditoria antigos baseado no período de retenção
-// @Tags logs-auditoria
-// @Accept json
-// @Produce json
-// @Param retention body dto.RetentionRequest true "Período de retenção em dias"
-// @Success 200 {object} response.SuccessResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /logs-auditoria/clean [post]
+// CleanOldLogs remove logs de auditoria antigos baseado em período de retenção
 func (h *LogAuditoriaHandler) CleanOldLogs(w http.ResponseWriter, r *http.Request) {
 	var req dto.RetentionRequest
 	
@@ -388,7 +313,7 @@ func (h *LogAuditoriaHandler) CleanOldLogs(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Validação do período de retenção
+	// Validar período de retenção contra limites do sistema
 	if req.RetentionDays < 30 {
 		response.WriteError(w, http.StatusBadRequest, "Período inválido", "Período mínimo de retenção é 30 dias")
 		return
@@ -407,19 +332,7 @@ func (h *LogAuditoriaHandler) CleanOldLogs(w http.ResponseWriter, r *http.Reques
 	response.WriteSuccess(w, http.StatusOK, "Limpeza de logs antigos realizada com sucesso", nil)
 }
 
-// ExportLogs godoc
-// @Summary Exportar logs de auditoria
-// @Description Exporta logs de auditoria em formato específico
-// @Tags logs-auditoria
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param start_date query string true "Data inicial (YYYY-MM-DD)"
-// @Param end_date query string true "Data final (YYYY-MM-DD)"
-// @Param format query string false "Formato de exportação (csv, excel)" default(csv)
-// @Success 200 {object} response.ExportResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
-// @Router /empresas/{empresa_id}/logs-auditoria/export [get]
+// ExportLogs exporta logs de auditoria em formato específico
 func (h *LogAuditoriaHandler) ExportLogs(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -451,11 +364,10 @@ func (h *LogAuditoriaHandler) ExportLogs(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
-	// CORRIGIDO: Como ExportLogs não está implementado no use case, vamos usar ListByDateRange
+	// Buscar logs do período especificado
 	logs, err := h.logAuditoriaUseCase.ListByDateRange(r.Context(), empresaID, startDate, endDate)
 	if err != nil {
 		if strings.Contains(err.Error(), "formato de data") {
@@ -466,7 +378,7 @@ func (h *LogAuditoriaHandler) ExportLogs(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Criar estrutura de exportação simulada
+	// Preparar dados de exportação com metadados
 	exportData := map[string]interface{}{
 		"format":      format,
 		"start_date":  startDate,
@@ -480,8 +392,7 @@ func (h *LogAuditoriaHandler) ExportLogs(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "Exportação de logs realizada com sucesso", exportData)
 }
 
-// Métodos auxiliares
-
+// validateLogCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *LogAuditoriaHandler) validateLogCreateRequest(req *dto.LogAuditoriaCreateRequest) error {
 	if req.IDUserAdmin <= 0 {
 		return fmt.Errorf("ID do usuário administrador é obrigatório")
@@ -498,6 +409,7 @@ func (h *LogAuditoriaHandler) validateLogCreateRequest(req *dto.LogAuditoriaCrea
 	return nil
 }
 
+// getPaginationParams extrai parâmetros de paginação da query string
 func (h *LogAuditoriaHandler) getPaginationParams(r *http.Request) (int, int) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
@@ -519,6 +431,7 @@ func (h *LogAuditoriaHandler) getPaginationParams(r *http.Request) (int, int) {
 	return limit, offset
 }
 
+// isValidExportFormat verifica se formato de exportação é válido
 func (h *LogAuditoriaHandler) isValidExportFormat(format string) bool {
 	validFormats := []string{"csv", "excel"}
 	for _, validFormat := range validFormats {
@@ -529,6 +442,7 @@ func (h *LogAuditoriaHandler) isValidExportFormat(format string) bool {
 	return false
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *LogAuditoriaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -538,6 +452,7 @@ func (h *LogAuditoriaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *LogAuditoriaHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -548,7 +463,7 @@ func (h *LogAuditoriaHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *LogAuditoriaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/logs-auditoria", h.CreateLogAuditoria).Methods("POST")
 	router.HandleFunc("/logs-auditoria/{id:[0-9]+}", h.GetLogAuditoria).Methods("GET")

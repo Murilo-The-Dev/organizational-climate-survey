@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -17,12 +19,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// UsuarioAdministradorHandler gerencia requisições HTTP relacionadas a usuários administrativos
 type UsuarioAdministradorHandler struct {
 	usuarioUseCase *usecase.UsuarioAdministradorUseCase
 	log            logger.Logger
 	validator      *validator.Validator
 }
 
+// NewUsuarioAdministradorHandler cria nova instância do handler de usuários administrativos
 func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministradorUseCase, log logger.Logger, val *validator.Validator) *UsuarioAdministradorHandler {
 	return &UsuarioAdministradorHandler{
 		usuarioUseCase: usuarioUseCase,
@@ -31,14 +35,17 @@ func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministrador
 	}
 }
 
+// PasswordUpdateRequest representa requisição de atualização de senha
 type PasswordUpdateRequest struct {
-	NovaSenha string `json:"nova_senha"`
+	NovaSenha string `json:"nova_senha"` // Nova senha a ser definida
 }
 
+// StatusUpdateRequest representa requisição de atualização de status
 type StatusUpdateRequest struct {
-	Status string `json:"status"`
+	Status string `json:"status"` // Novo status do usuário
 }
 
+// CreateUsuarioAdministrador cria novo usuário administrativo no sistema
 func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	var req dto.UsuarioAdministradorCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -47,24 +54,28 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 		return
 	}
 
+	// Validar formato do email
 	if err := h.validator.IsEmail(req.Email); err != nil {
 		h.log.WithContext(r.Context()).Info("Email inválido: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Email inválido", err.Error())
 		return
 	}
 
+	// Validar força da senha
 	if err := h.validator.IsPasswordStrong(req.Senha); err != nil {
 		h.log.WithContext(r.Context()).Info("Senha fraca: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Senha não atende requisitos", err.Error())
 		return
 	}
 
+	// Validar campos obrigatórios e regras de negócio
 	if err := h.validateUsuarioCreateRequest(&req); err != nil {
 		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
 
+	// Gerar hash bcrypt da senha
 	senhaHash, err := bcrypt.GenerateFromPassword([]byte(req.Senha), bcrypt.DefaultCost)
 	if err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao gerar hash: %v", err)
@@ -72,10 +83,12 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 		return
 	}
 
+	// Converter DTO para entidade de domínio
 	usuario := req.ToEntity(string(senhaHash))
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
+	// Executar caso de uso de criação
 	if err := h.usuarioUseCase.Create(r.Context(), usuario, userAdminID, clientIP); err != nil {
 		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID}).Error("Erro ao criar usuario: %v", err)
 		if strings.Contains(err.Error(), "já cadastrado") {
@@ -90,6 +103,7 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 	response.WriteSuccess(w, http.StatusCreated, "Usuário criado com sucesso", h.toUsuarioResponse(usuario))
 }
 
+// GetUsuarioAdministrador busca usuário administrativo por ID
 func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -112,6 +126,7 @@ func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWri
 	response.WriteSuccess(w, http.StatusOK, "Usuário encontrado", usuarioResponse)
 }
 
+// ListUsuariosByEmpresa lista usuários administrativos de uma empresa com filtro opcional de status
 func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -124,6 +139,7 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 	
 	var usuarios []*entity.UsuarioAdministrador
 	
+	// Aplicar filtro de status se fornecido
 	if status != "" {
 		usuarios, err = h.usuarioUseCase.ListByStatus(r.Context(), empresaID, status)
 	} else {
@@ -135,6 +151,7 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 		return
 	}
 
+	// Converter entidades para DTOs de resposta
 	usuariosResponse := make([]interface{}, len(usuarios))
 	for i, usuario := range usuarios {
 		usuariosResponse[i] = h.toUsuarioResponse(usuario)
@@ -143,6 +160,7 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 	response.WriteSuccess(w, http.StatusOK, "Usuários listados com sucesso", usuariosResponse)
 }
 
+// UpdateUsuarioAdministrador atualiza dados de usuário administrativo existente
 func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -157,6 +175,7 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 		return
 	}
 
+	// Validar email se fornecido na atualização
 	if req.Email != nil && *req.Email != "" {
 		if err := h.validator.IsEmail(*req.Email); err != nil {
 			h.log.WithContext(r.Context()).Info("Email inválido: %v", err)
@@ -165,6 +184,7 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 		}
 	}
 
+	// Buscar usuário existente
 	usuario, err := h.usuarioUseCase.GetByID(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
@@ -175,11 +195,13 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 		return
 	}
 
+	// Aplicar alterações parciais à entidade
 	req.ApplyToEntity(usuario)
 
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
+	// Executar atualização
 	if err := h.usuarioUseCase.Update(r.Context(), usuario, userAdminID, clientIP); err != nil {
 		if strings.Contains(err.Error(), "já está sendo usado") {
 			response.WriteError(w, http.StatusConflict, "Email já em uso", err.Error())
@@ -193,6 +215,7 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 	response.WriteSuccess(w, http.StatusOK, "Usuário atualizado com sucesso", usuarioResponse)
 }
 
+// UpdatePassword atualiza senha de usuário administrativo
 func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -207,6 +230,7 @@ func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *h
 		return
 	}
 
+	// Validar força da nova senha
 	if err := h.validator.IsPasswordStrong(req.NovaSenha); err != nil {
 		h.log.WithContext(r.Context()).Info("Senha fraca: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Senha não atende requisitos", err.Error())
@@ -228,6 +252,7 @@ func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *h
 	response.WriteSuccess(w, http.StatusOK, "Senha atualizada com sucesso", nil)
 }
 
+// UpdateStatus atualiza status de usuário administrativo
 func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -242,6 +267,7 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Validar status contra valores permitidos
 	validStatuses := []string{"Ativo", "Inativo", "Pendente"}
 	if err := h.validator.IsValidStatus(req.Status, validStatuses); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Status inválido", err.Error())
@@ -263,6 +289,7 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Status atualizado com sucesso", nil)
 }
 
+// DeleteUsuarioAdministrador remove usuário administrativo do sistema
 func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -290,6 +317,7 @@ func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.Response
 	response.WriteSuccess(w, http.StatusOK, "Usuário deletado com sucesso", nil)
 }
 
+// GetUsuarioByEmail busca usuário administrativo por endereço de email
 func (h *UsuarioAdministradorHandler) GetUsuarioByEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	email := vars["email"]
@@ -313,6 +341,7 @@ func (h *UsuarioAdministradorHandler) GetUsuarioByEmail(w http.ResponseWriter, r
 	response.WriteSuccess(w, http.StatusOK, "Usuário encontrado", usuarioResponse)
 }
 
+// validateUsuarioCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *UsuarioAdministradorHandler) validateUsuarioCreateRequest(req *dto.UsuarioAdministradorCreateRequest) error {
 	if req.IDEmpresa <= 0 {
 		return validator.ValidationError{Field: "id_empresa", Message: "obrigatório"}
@@ -324,6 +353,7 @@ func (h *UsuarioAdministradorHandler) validateUsuarioCreateRequest(req *dto.Usua
 	return h.validator.IsValidStatus(req.Status, validStatuses)
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *UsuarioAdministradorHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -333,6 +363,7 @@ func (h *UsuarioAdministradorHandler) getUserAdminIDFromContext(r *http.Request)
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *UsuarioAdministradorHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -343,6 +374,7 @@ func (h *UsuarioAdministradorHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
+// toUsuarioResponse converte entidade de domínio para DTO de resposta
 func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioAdministrador) response.UsuarioAdministradorResponse {
 	resp := response.UsuarioAdministradorResponse{
 		ID:           usuario.ID,
@@ -352,6 +384,7 @@ func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioA
 		Status:       usuario.Status,
 	}
 
+	// Incluir dados da empresa se carregada
 	if usuario.Empresa != nil {
 		empresaResp := &response.EmpresaResponse{
 			ID:           usuario.Empresa.ID,
@@ -366,6 +399,7 @@ func (h *UsuarioAdministradorHandler) toUsuarioResponse(usuario *entity.UsuarioA
 	return resp
 }
 
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *UsuarioAdministradorHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/usuarios-administradores", h.CreateUsuarioAdministrador).Methods("POST")
 	router.HandleFunc("/usuarios-administradores/{id:[0-9]+}", h.GetUsuarioAdministrador).Methods("GET")

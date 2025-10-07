@@ -1,3 +1,5 @@
+// Package usecase implementa os casos de uso para Setores.
+// Fornece funcionalidades de CRUD e validações específicas para setores empresariais.
 package usecase
 
 import (
@@ -9,12 +11,14 @@ import (
 	"time"
 )
 
+// SetorUseCase implementa casos de uso para gerenciamento de setores
 type SetorUseCase struct {
-	repo             repository.SetorRepository
-	empresaRepo      repository.EmpresaRepository
-	logAuditoriaRepo repository.LogAuditoriaRepository
+	repo             repository.SetorRepository       // Repositório de setores
+	empresaRepo      repository.EmpresaRepository     // Repositório de empresas
+	logAuditoriaRepo repository.LogAuditoriaRepository // Repositório de logs
 }
 
+// NewSetorUseCase cria uma nova instância do caso de uso de setores
 func NewSetorUseCase(
 	repo repository.SetorRepository,
 	empresaRepo repository.EmpresaRepository,
@@ -27,6 +31,7 @@ func NewSetorUseCase(
 	}
 }
 
+// Create cria um novo setor com validações
 func (uc *SetorUseCase) Create(ctx context.Context, setor *entity.Setor, userAdminID int, enderecoIP string) error {
 	// Validações básicas
 	if setor.IDEmpresa <= 0 {
@@ -64,6 +69,7 @@ func (uc *SetorUseCase) Create(ctx context.Context, setor *entity.Setor, userAdm
 	return nil
 }
 
+// GetByID busca um setor pelo seu ID
 func (uc *SetorUseCase) GetByID(ctx context.Context, id int) (*entity.Setor, error) {
 	if id <= 0 {
 		return nil, fmt.Errorf("ID do setor deve ser maior que zero")
@@ -72,6 +78,7 @@ func (uc *SetorUseCase) GetByID(ctx context.Context, id int) (*entity.Setor, err
 	return uc.repo.GetByID(ctx, id)
 }
 
+// GetByNome busca um setor pelo nome dentro de uma empresa
 func (uc *SetorUseCase) GetByNome(ctx context.Context, empresaID int, nome string) (*entity.Setor, error) {
 	if empresaID <= 0 {
 		return nil, fmt.Errorf("ID da empresa deve ser maior que zero")
@@ -84,6 +91,7 @@ func (uc *SetorUseCase) GetByNome(ctx context.Context, empresaID int, nome strin
 	return uc.repo.GetByNome(ctx, empresaID, nome)
 }
 
+// ListByEmpresa lista todos os setores de uma empresa
 func (uc *SetorUseCase) ListByEmpresa(ctx context.Context, empresaID int) ([]*entity.Setor, error) {
 	if empresaID <= 0 {
 		return nil, fmt.Errorf("ID da empresa deve ser maior que zero")
@@ -92,6 +100,7 @@ func (uc *SetorUseCase) ListByEmpresa(ctx context.Context, empresaID int) ([]*en
 	return uc.repo.ListByEmpresa(ctx, empresaID)
 }
 
+// Update atualiza um setor existente
 func (uc *SetorUseCase) Update(ctx context.Context, setor *entity.Setor, userAdminID int, enderecoIP string) error {
 	// Validações
 	if setor.ID <= 0 {
@@ -133,6 +142,7 @@ func (uc *SetorUseCase) Update(ctx context.Context, setor *entity.Setor, userAdm
 	return nil
 }
 
+// Delete remove um setor do sistema
 func (uc *SetorUseCase) Delete(ctx context.Context, id int, userAdminID int, enderecoIP string) error {
 	if id <= 0 {
 		return fmt.Errorf("ID do setor inválido")

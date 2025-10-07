@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -16,11 +18,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// RespostaHandler gerencia requisições HTTP relacionadas a respostas de pesquisas
 type RespostaHandler struct {
 	respostaUseCase *usecase.RespostaUseCase
 	log             logger.Logger
 }
 
+// NewRespostaHandler cria nova instância do handler de respostas
 func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase, log logger.Logger) *RespostaHandler {
 	return &RespostaHandler{
 		respostaUseCase: respostaUseCase,
@@ -28,6 +32,7 @@ func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase, log logger.Log
 	}
 }
 
+// SubmitRespostas processa submissão em lote de respostas de pesquisa
 func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request) {
 	var reqs []dto.RespostaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
@@ -35,11 +40,14 @@ func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
+	
 	if len(reqs) == 0 {
 		h.log.WithContext(r.Context()).Info("Nenhuma resposta enviada")
 		response.WriteError(w, http.StatusBadRequest, "Lista vazia", "Pelo menos uma resposta deve ser fornecida")
 		return
 	}
+	
+	// Validar e converter todas as respostas
 	respostas := make([]*entity.Resposta, len(reqs))
 	for i, req := range reqs {
 		if err := h.validateRespostaCreateRequest(&req); err != nil {
@@ -49,6 +57,8 @@ func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request
 		}
 		respostas[i] = req.ToEntity()
 	}
+	
+	// Executar caso de uso de criação em lote
 	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas); err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao salvar respostas: %v", err)
 		if strings.Contains(err.Error(), "pesquisa não está ativa") {
@@ -58,22 +68,12 @@ func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
+	
 	h.log.WithContext(r.Context()).Info("Respostas submetidas com sucesso: %d", len(respostas))
 	response.WriteSuccess(w, http.StatusCreated, "Respostas submetidas com sucesso", nil)
 }
 
-
-// GetRespostaStats godoc
-// @Summary Obter estatísticas de respostas
-// @Description Retorna estatísticas agregadas de respostas de uma pesquisa
-// @Tags respostas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/respostas/stats [get]
+// GetRespostaStats retorna estatísticas agregadas de respostas de uma pesquisa
 func (h *RespostaHandler) GetRespostaStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -82,7 +82,6 @@ func (h *RespostaHandler) GetRespostaStats(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// O método correto no use case é GetAggregatedByPesquisa, não GetRespostaStats
 	stats, err := h.respostaUseCase.GetAggregatedByPesquisa(r.Context(), pesquisaID)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrada") {
@@ -96,17 +95,7 @@ func (h *RespostaHandler) GetRespostaStats(w http.ResponseWriter, r *http.Reques
 	response.WriteSuccess(w, http.StatusOK, "Estatísticas obtidas com sucesso", stats)
 }
 
-// GetRespostasByPergunta godoc
-// @Summary Obter respostas agregadas por pergunta
-// @Description Retorna dados agregados de respostas para uma pergunta específica
-// @Tags respostas
-// @Produce json
-// @Param pergunta_id path int true "ID da pergunta"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{pergunta_id}/respostas/aggregated [get]
+// GetRespostasByPergunta retorna dados agregados de respostas para pergunta específica
 func (h *RespostaHandler) GetRespostasByPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	perguntaID, err := strconv.Atoi(vars["pergunta_id"])
@@ -128,17 +117,7 @@ func (h *RespostaHandler) GetRespostasByPergunta(w http.ResponseWriter, r *http.
 	response.WriteSuccess(w, http.StatusOK, "Dados agregados obtidos com sucesso", aggregatedData)
 }
 
-// GetRespostasByPesquisa godoc
-// @Summary Obter respostas agregadas por pesquisa
-// @Description Retorna dados agregados de todas as respostas de uma pesquisa
-// @Tags respostas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/respostas/aggregated [get]
+// GetRespostasByPesquisa retorna dados agregados de todas as respostas de uma pesquisa
 func (h *RespostaHandler) GetRespostasByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -160,19 +139,7 @@ func (h *RespostaHandler) GetRespostasByPesquisa(w http.ResponseWriter, r *http.
 	response.WriteSuccess(w, http.StatusOK, "Dados agregados da pesquisa obtidos com sucesso", aggregatedData)
 }
 
-// GetRespostasByDateRange godoc
-// @Summary Obter respostas por período
-// @Description Retorna respostas de uma pesquisa filtradas por período
-// @Tags respostas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Param start_date query string true "Data inicial (YYYY-MM-DD)"
-// @Param end_date query string true "Data final (YYYY-MM-DD)"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/respostas/by-date [get]
+// GetRespostasByDateRange retorna respostas de pesquisa filtradas por período
 func (h *RespostaHandler) GetRespostasByDateRange(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -211,17 +178,7 @@ func (h *RespostaHandler) GetRespostasByDateRange(w http.ResponseWriter, r *http
 	response.WriteSuccess(w, http.StatusOK, "Respostas por período obtidas com sucesso", respostas)
 }
 
-// CountRespostasByPesquisa godoc
-// @Summary Contar respostas de uma pesquisa
-// @Description Retorna o número total de respostas de uma pesquisa
-// @Tags respostas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/respostas/count [get]
+// CountRespostasByPesquisa retorna número total de respostas de uma pesquisa
 func (h *RespostaHandler) CountRespostasByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -248,17 +205,7 @@ func (h *RespostaHandler) CountRespostasByPesquisa(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Contagem de respostas obtida com sucesso", countResponse)
 }
 
-// CountRespostasByPergunta godoc
-// @Summary Contar respostas de uma pergunta
-// @Description Retorna o número total de respostas de uma pergunta específica
-// @Tags respostas
-// @Produce json
-// @Param pergunta_id path int true "ID da pergunta"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{pergunta_id}/respostas/count [get]
+// CountRespostasByPergunta retorna número total de respostas de pergunta específica
 func (h *RespostaHandler) CountRespostasByPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	perguntaID, err := strconv.Atoi(vars["pergunta_id"])
@@ -285,17 +232,7 @@ func (h *RespostaHandler) CountRespostasByPergunta(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Contagem de respostas da pergunta obtida com sucesso", countResponse)
 }
 
-// DeleteRespostasByPesquisa godoc
-// @Summary Deletar respostas de uma pesquisa
-// @Description Remove todas as respostas de uma pesquisa (operação administrativa)
-// @Tags respostas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/respostas [delete]
+// DeleteRespostasByPesquisa remove todas as respostas de uma pesquisa
 func (h *RespostaHandler) DeleteRespostasByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -304,10 +241,7 @@ func (h *RespostaHandler) DeleteRespostasByPesquisa(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
-	
-	// Para operações de delete, definir um motivo padrão
 	motivo := "Exclusão solicitada pelo administrador"
 
 	if err := h.respostaUseCase.DeleteByPesquisa(r.Context(), pesquisaID, userAdminID, motivo); err != nil {
@@ -322,17 +256,7 @@ func (h *RespostaHandler) DeleteRespostasByPesquisa(w http.ResponseWriter, r *ht
 	response.WriteSuccess(w, http.StatusOK, "Respostas da pesquisa deletadas com sucesso", nil)
 }
 
-// GetStatsByPergunta godoc
-// @Summary Obter estatísticas detalhadas de uma pergunta
-// @Description Retorna estatísticas completas de respostas para uma pergunta específica
-// @Tags respostas
-// @Produce json
-// @Param pergunta_id path int true "ID da pergunta"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{pergunta_id}/respostas/stats [get]
+// GetStatsByPergunta retorna estatísticas completas de respostas para pergunta específica
 func (h *RespostaHandler) GetStatsByPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	perguntaID, err := strconv.Atoi(vars["pergunta_id"])
@@ -354,8 +278,7 @@ func (h *RespostaHandler) GetStatsByPergunta(w http.ResponseWriter, r *http.Requ
 	response.WriteSuccess(w, http.StatusOK, "Estatísticas da pergunta obtidas com sucesso", stats)
 }
 
-// Métodos auxiliares
-
+// validateRespostaCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *RespostaHandler) validateRespostaCreateRequest(req *dto.RespostaCreateRequest) error {
 	if req.IDPergunta <= 0 {
 		return fmt.Errorf("ID da pergunta é obrigatório")
@@ -369,6 +292,7 @@ func (h *RespostaHandler) validateRespostaCreateRequest(req *dto.RespostaCreateR
 	return nil
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *RespostaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -378,6 +302,7 @@ func (h *RespostaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *RespostaHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -388,12 +313,9 @@ func (h *RespostaHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *RespostaHandler) RegisterRoutes(router *mux.Router) {
-	// Rota pública para submissão de respostas (sem autenticação)
 	router.HandleFunc("/respostas/submit", h.SubmitRespostas).Methods("POST")
-	
-	// Rotas administrativas (requerem autenticação)
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/stats", h.GetRespostaStats).Methods("GET")
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/aggregated", h.GetRespostasByPesquisa).Methods("GET")
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/by-date", h.GetRespostasByDateRange).Methods("GET")

@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -15,11 +17,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// SetorHandler gerencia requisições HTTP relacionadas a setores organizacionais
 type SetorHandler struct {
 	setorUseCase *usecase.SetorUseCase
 	log          logger.Logger
 }
 
+// NewSetorHandler cria nova instância do handler de setores
 func NewSetorHandler(setorUseCase *usecase.SetorUseCase, log logger.Logger) *SetorHandler {
 	return &SetorHandler{
 		setorUseCase: setorUseCase,
@@ -27,6 +31,7 @@ func NewSetorHandler(setorUseCase *usecase.SetorUseCase, log logger.Logger) *Set
 	}
 }
 
+// CreateSetor cria novo setor organizacional no sistema
 func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 	var req dto.SetorCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -34,14 +39,20 @@ func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
+	
+	// Validar campos obrigatórios e regras de negócio
 	if err := h.validateSetorCreateRequest(&req); err != nil {
 		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
+	
+	// Converter DTO para entidade de domínio
 	setor := req.ToEntity()
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
+	
+	// Executar caso de uso de criação
 	if err := h.setorUseCase.Create(r.Context(), setor, userAdminID, clientIP); err != nil {
 		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar setor: %v", err)
 		if strings.Contains(err.Error(), "já existe") {
@@ -51,22 +62,12 @@ func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
+	
 	h.log.WithFields(map[string]interface{}{"setor_id": setor.ID, "user_admin_id": userAdminID}).Info("Setor criado com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Setor criado com sucesso", h.toSetorResponse(setor))
 }
 
-
-// GetSetor godoc
-// @Summary Buscar setor por ID
-// @Description Retorna um setor específico pelo ID
-// @Tags setores
-// @Produce json
-// @Param id path int true "ID do setor"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /setores/{id} [get]
+// GetSetor busca setor organizacional por ID
 func (h *SetorHandler) GetSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -89,16 +90,7 @@ func (h *SetorHandler) GetSetor(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Setor encontrado", setorResponse)
 }
 
-// ListSetoresByEmpresa godoc
-// @Summary Listar setores por empresa
-// @Description Retorna lista de setores de uma empresa específica
-// @Tags setores
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /empresas/{empresa_id}/setores [get]
+// ListSetoresByEmpresa lista todos os setores de uma empresa específica
 func (h *SetorHandler) ListSetoresByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -113,7 +105,7 @@ func (h *SetorHandler) ListSetoresByEmpresa(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	setoresResponse := make([]interface{}, len(setores))
 	for i, setor := range setores {
 		setoresResponse[i] = h.toSetorResponse(setor)
@@ -122,20 +114,7 @@ func (h *SetorHandler) ListSetoresByEmpresa(w http.ResponseWriter, r *http.Reque
 	response.WriteSuccess(w, http.StatusOK, "Setores listados com sucesso", setoresResponse)
 }
 
-// UpdateSetor godoc
-// @Summary Atualizar setor
-// @Description Atualiza dados de um setor existente
-// @Tags setores
-// @Accept json
-// @Produce json
-// @Param id path int true "ID do setor"
-// @Param setor body dto.SetorUpdateRequest true "Dados para atualização"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /setores/{id} [put]
+// UpdateSetor atualiza dados de setor organizacional existente
 func (h *SetorHandler) UpdateSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -161,13 +140,13 @@ func (h *SetorHandler) UpdateSetor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Aplicar atualizações
+	// Aplicar alterações parciais à entidade
 	req.ApplyToEntity(setor)
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
+	// Executar atualização
 	if err := h.setorUseCase.Update(r.Context(), setor, userAdminID, clientIP); err != nil {
 		if strings.Contains(err.Error(), "já existe") {
 			response.WriteError(w, http.StatusConflict, "Nome do setor já em uso", err.Error())
@@ -181,18 +160,7 @@ func (h *SetorHandler) UpdateSetor(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Setor atualizado com sucesso", setorResponse)
 }
 
-// DeleteSetor godoc
-// @Summary Deletar setor
-// @Description Remove um setor do sistema
-// @Tags setores
-// @Produce json
-// @Param id path int true "ID do setor"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /setores/{id} [delete]
+// DeleteSetor remove setor organizacional do sistema
 func (h *SetorHandler) DeleteSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -201,7 +169,6 @@ func (h *SetorHandler) DeleteSetor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -221,18 +188,7 @@ func (h *SetorHandler) DeleteSetor(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Setor deletado com sucesso", nil)
 }
 
-// GetSetorByNome godoc
-// @Summary Buscar setor por nome
-// @Description Retorna um setor específico pelo nome dentro de uma empresa
-// @Tags setores
-// @Produce json
-// @Param empresa_id path int true "ID da empresa"
-// @Param nome path string true "Nome do setor"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /empresas/{empresa_id}/setores/nome/{nome} [get]
+// GetSetorByNome busca setor organizacional por nome dentro de uma empresa
 func (h *SetorHandler) GetSetorByNome(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -261,8 +217,7 @@ func (h *SetorHandler) GetSetorByNome(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Setor encontrado", setorResponse)
 }
 
-// Métodos auxiliares
-
+// validateSetorCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *SetorHandler) validateSetorCreateRequest(req *dto.SetorCreateRequest) error {
 	if req.IDEmpresa <= 0 {
 		return fmt.Errorf("ID da empresa é obrigatório")
@@ -279,6 +234,7 @@ func (h *SetorHandler) validateSetorCreateRequest(req *dto.SetorCreateRequest) e
 	return nil
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *SetorHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -288,6 +244,7 @@ func (h *SetorHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *SetorHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -298,7 +255,7 @@ func (h *SetorHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// toSetorResponse converte entity.Setor para response.SetorResponse
+// toSetorResponse converte entidade de domínio para DTO de resposta
 func (h *SetorHandler) toSetorResponse(setor *entity.Setor) response.SetorResponse {
 	resp := response.SetorResponse{
 		ID:        setor.ID,
@@ -306,7 +263,7 @@ func (h *SetorHandler) toSetorResponse(setor *entity.Setor) response.SetorRespon
 		Descricao: setor.Descricao,
 	}
 
-	// Converte empresa se carregada
+	// Incluir dados da empresa se carregada
 	if setor.Empresa != nil {
 		empresaResp := &response.EmpresaResponse{
 			ID:           setor.Empresa.ID,
@@ -321,7 +278,7 @@ func (h *SetorHandler) toSetorResponse(setor *entity.Setor) response.SetorRespon
 	return resp
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *SetorHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/setores", h.CreateSetor).Methods("POST")
 	router.HandleFunc("/setores/{id:[0-9]+}", h.GetSetor).Methods("GET")

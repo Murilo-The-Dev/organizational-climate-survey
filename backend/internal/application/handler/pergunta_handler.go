@@ -1,3 +1,5 @@
+// Package handler implementa os controladores HTTP da aplicação.
+// Processa requisições, valida entrada e coordena a execução de casos de uso.
 package handler
 
 import (
@@ -16,11 +18,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// PerguntaHandler gerencia requisições HTTP relacionadas a perguntas de pesquisas
 type PerguntaHandler struct {
 	perguntaUseCase *usecase.PerguntaUseCase
 	log             logger.Logger
 }
 
+// NewPerguntaHandler cria nova instância do handler de perguntas
 func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase, log logger.Logger) *PerguntaHandler {
 	return &PerguntaHandler{
 		perguntaUseCase: perguntaUseCase,
@@ -28,6 +32,7 @@ func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase, log logger.Log
 	}
 }
 
+// CreatePergunta cria nova pergunta no sistema
 func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request) {
 	var req dto.PerguntaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -61,17 +66,7 @@ func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusCreated, "Pergunta criada com sucesso", perguntaResponse)
 }
 
-// CreatePerguntasBatch godoc
-// @Summary Criar múltiplas perguntas
-// @Description Cria múltiplas perguntas para uma pesquisa em uma única operação
-// @Tags perguntas
-// @Accept json
-// @Produce json
-// @Param perguntas body []dto.PerguntaCreateRequest true "Lista de perguntas"
-// @Success 201 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/batch [post]
+// CreatePerguntasBatch cria múltiplas perguntas em uma única operação
 func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []dto.PerguntaCreateRequest
 	
@@ -90,7 +85,7 @@ func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Validar todas as perguntas
+	// Validar e converter todas as perguntas
 	perguntas := make([]*entity.Pergunta, len(reqs))
 	for i, req := range reqs {
 		if err := h.validatePerguntaCreateRequest(&req); err != nil {
@@ -100,7 +95,6 @@ func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Re
 		perguntas[i] = req.ToEntity()
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -109,7 +103,7 @@ func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	perguntasResponse := make([]response.PerguntaResponse, len(perguntas))
 	for i, pergunta := range perguntas {
 		perguntasResponse[i] = response.PerguntaResponse{
@@ -124,17 +118,7 @@ func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Re
 	response.WriteSuccess(w, http.StatusCreated, "Perguntas criadas com sucesso", perguntasResponse)
 }
 
-// GetPergunta godoc
-// @Summary Buscar pergunta por ID
-// @Description Retorna uma pergunta específica pelo ID
-// @Tags perguntas
-// @Produce json
-// @Param id path int true "ID da pergunta"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{id} [get]
+// GetPergunta busca pergunta por ID
 func (h *PerguntaHandler) GetPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -164,16 +148,7 @@ func (h *PerguntaHandler) GetPergunta(w http.ResponseWriter, r *http.Request) {
 	response.WriteSuccess(w, http.StatusOK, "Pergunta encontrada", perguntaResponse)
 }
 
-// ListPerguntasByPesquisa godoc
-// @Summary Listar perguntas por pesquisa
-// @Description Retorna lista ordenada de perguntas de uma pesquisa específica
-// @Tags perguntas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/perguntas [get]
+// ListPerguntasByPesquisa lista perguntas de pesquisa ordenadas por exibição
 func (h *PerguntaHandler) ListPerguntasByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -188,7 +163,7 @@ func (h *PerguntaHandler) ListPerguntasByPesquisa(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Converter para response
+	// Converter entidades para DTOs de resposta
 	perguntasResponse := make([]response.PerguntaResponse, len(perguntas))
 	for i, pergunta := range perguntas {
 		perguntasResponse[i] = response.PerguntaResponse{
@@ -203,19 +178,7 @@ func (h *PerguntaHandler) ListPerguntasByPesquisa(w http.ResponseWriter, r *http
 	response.WriteSuccess(w, http.StatusOK, "Perguntas listadas com sucesso", perguntasResponse)
 }
 
-// UpdatePergunta godoc
-// @Summary Atualizar pergunta
-// @Description Atualiza dados de uma pergunta existente
-// @Tags perguntas
-// @Accept json
-// @Produce json
-// @Param id path int true "ID da pergunta"
-// @Param pergunta body dto.PerguntaUpdateRequest true "Dados para atualização"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{id} [put]
+// UpdatePergunta atualiza dados de pergunta existente
 func (h *PerguntaHandler) UpdatePergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -241,10 +204,9 @@ func (h *PerguntaHandler) UpdatePergunta(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Aplicar atualizações
+	// Aplicar alterações parciais à entidade
 	req.ApplyToEntity(pergunta)
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -264,19 +226,7 @@ func (h *PerguntaHandler) UpdatePergunta(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "Pergunta atualizada com sucesso", perguntaResponse)
 }
 
-// UpdateOrdemPergunta godoc
-// @Summary Atualizar ordem da pergunta
-// @Description Atualiza a ordem de exibição de uma pergunta
-// @Tags perguntas
-// @Accept json
-// @Produce json
-// @Param id path int true "ID da pergunta"
-// @Param ordem body struct{NovaOrdem int `json:"nova_ordem"`} true "Nova ordem"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{id}/ordem [put]
+// UpdateOrdemPergunta atualiza ordem de exibição de pergunta específica
 func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -293,13 +243,12 @@ func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Validação da ordem
+	// Validar ordem fornecida
 	if req.NovaOrdem <= 0 {
 		response.WriteError(w, http.StatusBadRequest, "Ordem inválida", "Ordem deve ser maior que zero")
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -315,18 +264,7 @@ func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Req
 	response.WriteSuccess(w, http.StatusOK, "Ordem da pergunta atualizada com sucesso", nil)
 }
 
-// DeletePergunta godoc
-// @Summary Deletar pergunta
-// @Description Remove uma pergunta do sistema
-// @Tags perguntas
-// @Produce json
-// @Param id path int true "ID da pergunta"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 404 {object} response.APIResponse
-// @Failure 409 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /perguntas/{id} [delete]
+// DeletePergunta remove pergunta do sistema
 func (h *PerguntaHandler) DeletePergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -335,7 +273,6 @@ func (h *PerguntaHandler) DeletePergunta(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -355,18 +292,7 @@ func (h *PerguntaHandler) DeletePergunta(w http.ResponseWriter, r *http.Request)
 	response.WriteSuccess(w, http.StatusOK, "Pergunta deletada com sucesso", nil)
 }
 
-// ReorderPerguntas godoc
-// @Summary Reordenar perguntas
-// @Description Reordena todas as perguntas de uma pesquisa
-// @Tags perguntas
-// @Accept json
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Param ordem body struct{PerguntaIDs []int `json:"pergunta_ids"`} true "Nova ordem das perguntas"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/perguntas/reorder [put]
+// ReorderPerguntas reordena todas as perguntas de uma pesquisa
 func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -383,13 +309,12 @@ func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Validação básica
+	// Validar lista de IDs
 	if len(req.PerguntaIDs) == 0 {
 		response.WriteError(w, http.StatusBadRequest, "Lista vazia", "Lista de IDs das perguntas é obrigatória")
 		return
 	}
 
-	// Obter informações do usuário autenticado
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
 
@@ -401,16 +326,7 @@ func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Reques
 	response.WriteSuccess(w, http.StatusOK, "Perguntas reordenadas com sucesso", nil)
 }
 
-// GetPerguntasWithStats godoc
-// @Summary Listar perguntas com estatísticas
-// @Description Retorna perguntas de uma pesquisa com estatísticas de respostas
-// @Tags perguntas
-// @Produce json
-// @Param pesquisa_id path int true "ID da pesquisa"
-// @Success 200 {object} response.APIResponse
-// @Failure 400 {object} response.APIResponse
-// @Failure 500 {object} response.APIResponse
-// @Router /pesquisas/{pesquisa_id}/perguntas/with-stats [get]
+// GetPerguntasWithStats lista perguntas de pesquisa com estatísticas de respostas
 func (h *PerguntaHandler) GetPerguntasWithStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -428,8 +344,7 @@ func (h *PerguntaHandler) GetPerguntasWithStats(w http.ResponseWriter, r *http.R
 	response.WriteSuccess(w, http.StatusOK, "Perguntas com estatísticas listadas com sucesso", perguntasWithStats)
 }
 
-// Métodos auxiliares
-
+// validatePerguntaCreateRequest valida campos obrigatórios e regras de negócio para criação
 func (h *PerguntaHandler) validatePerguntaCreateRequest(req *dto.PerguntaCreateRequest) error {
 	if req.IDPesquisa <= 0 {
 		return fmt.Errorf("ID da pesquisa é obrigatório")
@@ -452,6 +367,7 @@ func (h *PerguntaHandler) validatePerguntaCreateRequest(req *dto.PerguntaCreateR
 	return nil
 }
 
+// isValidTipoPergunta verifica se tipo de pergunta fornecido é válido
 func (h *PerguntaHandler) isValidTipoPergunta(tipo string) bool {
 	validTypes := []string{"MultiplaEscolha", "RespostaAberta", "EscalaNumerica", "SimNao"}
 	for _, validType := range validTypes {
@@ -462,6 +378,7 @@ func (h *PerguntaHandler) isValidTipoPergunta(tipo string) bool {
 	return false
 }
 
+// getUserAdminIDFromContext extrai ID do usuário administrativo do contexto da requisição
 func (h *PerguntaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	if userID := r.Context().Value("user_admin_id"); userID != nil {
 		if id, ok := userID.(int); ok {
@@ -471,6 +388,7 @@ func (h *PerguntaHandler) getUserAdminIDFromContext(r *http.Request) int {
 	return 0
 }
 
+// getClientIP extrai endereço IP do cliente considerando proxies
 func (h *PerguntaHandler) getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
 		return strings.Split(ip, ",")[0]
@@ -481,7 +399,7 @@ func (h *PerguntaHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra as rotas do handler
+// RegisterRoutes registra todas as rotas HTTP do handler no roteador
 func (h *PerguntaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/perguntas", h.CreatePergunta).Methods("POST")
 	router.HandleFunc("/perguntas/batch", h.CreatePerguntasBatch).Methods("POST")
