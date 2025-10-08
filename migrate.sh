@@ -47,7 +47,7 @@ EOF
 }
 
 # Função para aplicar migrations pendentes
-# Basicamente roda pelos arquivos ".sql" exceto o 000_setup, verifica se já foi executado, caso negativo aplica a migration e caso positivo informa que já foi aplicada.
+# Basicamente roda pelos arquivos ".sql" exceto o 000_setup (considerando que você já aplicou o setup em sua tabela), verifica se já foi executado, caso negativo aplica a migration e caso positivo informa que já foi aplicada.
 aplicar_migrations() {
     echo -e "${YELLOW}🔄 Verificando migrations pendentes...${NC}"
     
@@ -130,4 +130,3 @@ case "$1" in
         echo "  ./migrate.sh aplicar"
         ;;
 esac
-EOF
