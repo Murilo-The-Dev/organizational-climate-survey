@@ -1,6 +1,6 @@
 # Backend - Sistema de Pesquisa de Clima Organizacional
 
-Este repositório contém o **backend** do sistema de pesquisa de clima organizacional, desenvolvido em **Go (Golang)** com persistência em **MySQL**.
+Este repositório contém o **backend** do sistema de pesquisa de clima organizacional, desenvolvido em **Go (Golang)** com persistência em **Postgres**.
 
 ---
 
