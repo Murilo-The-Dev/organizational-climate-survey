@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/repository"
-	"regexp"
+	"organizational-climate-survey/backend/pkg/validator"
 	"strings"
 	"time"
 )
@@ -16,6 +16,7 @@ import (
 type EmpresaUseCase struct {
 	empresaRepo      repository.EmpresaRepository      // Repositório de empresas
 	logAuditoriaRepo repository.LogAuditoriaRepository // Repositório de logs
+	validator        *validator.Validator              // Validador de dados
 }
 
 // NewEmpresaUseCase cria uma nova instância do caso de uso de empresas
@@ -23,24 +24,8 @@ func NewEmpresaUseCase(empresaRepo repository.EmpresaRepository, logRepo reposit
 	return &EmpresaUseCase{
 		empresaRepo:      empresaRepo,
 		logAuditoriaRepo: logRepo,
+		validator:        validator.New(),
 	}
-}
-
-// ValidateCNPJ valida formato básico do CNPJ
-func (uc *EmpresaUseCase) ValidateCNPJ(cnpj string) error {
-	// Remove caracteres não numéricos
-	cnpjNumbers := regexp.MustCompile(`\D`).ReplaceAllString(cnpj, "")
-
-	if len(cnpjNumbers) != 14 {
-		return fmt.Errorf("CNPJ deve conter 14 dígitos")
-	}
-
-	// Verifica se não são todos iguais (ex: 11111111111111)
-	if regexp.MustCompile(`^(\d)\1{13}$`).MatchString(cnpjNumbers) {
-		return fmt.Errorf("CNPJ inválido")
-	}
-
-	return nil
 }
 
 // Create cria uma nova empresa com validações de negócio
@@ -54,8 +39,8 @@ func (uc *EmpresaUseCase) Create(ctx context.Context, empresa *entity.Empresa, u
 		return fmt.Errorf("razão social é obrigatória")
 	}
 
-	if err := uc.ValidateCNPJ(empresa.CNPJ); err != nil {
-		return fmt.Errorf("CNPJ inválido: %v", err)
+	if err := uc.validator.IsCNPJ(empresa.CNPJ); err != nil {
+		return err
 	}
 
 	// Verifica se CNPJ já existe
@@ -98,7 +83,7 @@ func (uc *EmpresaUseCase) GetByID(ctx context.Context, id int) (*entity.Empresa,
 
 // GetByCNPJ busca uma empresa pelo CNPJ
 func (uc *EmpresaUseCase) GetByCNPJ(ctx context.Context, cnpj string) (*entity.Empresa, error) {
-	if err := uc.ValidateCNPJ(cnpj); err != nil {
+	if err := uc.validator.IsCNPJ(cnpj); err != nil {
 		return nil, err
 	}
 
@@ -132,8 +117,8 @@ func (uc *EmpresaUseCase) Update(ctx context.Context, empresa *entity.Empresa, u
 		return fmt.Errorf("razão social é obrigatória")
 	}
 
-	if err := uc.ValidateCNPJ(empresa.CNPJ); err != nil {
-		return fmt.Errorf("CNPJ inválido: %v", err)
+	if err := uc.validator.IsCNPJ(empresa.CNPJ); err != nil {
+		return err
 	}
 
 	// Verifica se empresa existe

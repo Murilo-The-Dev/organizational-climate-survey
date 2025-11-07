@@ -33,6 +33,8 @@ func NewSetorUseCase(
 
 // Create cria um novo setor com validações
 func (uc *SetorUseCase) Create(ctx context.Context, setor *entity.Setor, userAdminID int, enderecoIP string) error {
+	fmt.Println("DEBUG: Iniciando Create no usecase")
+	
 	// Validações básicas
 	if setor.IDEmpresa <= 0 {
 		return fmt.Errorf("ID da empresa é obrigatório")
@@ -42,17 +44,34 @@ func (uc *SetorUseCase) Create(ctx context.Context, setor *entity.Setor, userAdm
 		return fmt.Errorf("nome do setor é obrigatório")
 	}
 	
+	fmt.Printf("DEBUG: Validações OK - Empresa=%d, Nome=%s\n", setor.IDEmpresa, setor.NomeSetor)
+	
 	// Verifica se empresa existe
 	_, err := uc.empresaRepo.GetByID(ctx, setor.IDEmpresa)
 	if err != nil {
+		fmt.Printf("DEBUG: Empresa não encontrada: %v\n", err)
 		return fmt.Errorf("empresa não encontrada: %v", err)
 	}
+	
+	fmt.Println("DEBUG: Empresa existe")
 	
 	// Verifica se já existe setor com mesmo nome na empresa
 	existingSetor, err := uc.repo.GetByNome(ctx, setor.IDEmpresa, setor.NomeSetor)
 	if err == nil && existingSetor != nil {
+		fmt.Println("DEBUG: Setor já existe")
 		return fmt.Errorf("setor '%s' já existe nesta empresa", setor.NomeSetor)
 	}
+	
+	fmt.Println("DEBUG: Setor não existe, criando...")
+	fmt.Printf("DEBUG: Antes de Create - setor.ID=%d\n", setor.ID)
+	
+	// Criar setor no banco
+	if err := uc.repo.Create(ctx, setor); err != nil {
+		fmt.Printf("DEBUG: Erro ao criar setor: %v\n", err)
+		return fmt.Errorf("erro ao criar setor: %v", err)
+	}
+	
+	fmt.Printf("DEBUG: Depois de Create - setor.ID=%d\n", setor.ID)
 	
 	// Log de auditoria
 	if userAdminID > 0 {

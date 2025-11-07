@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -200,6 +201,13 @@ func (h *EmpresaHandler) DeleteEmpresa(w http.ResponseWriter, r *http.Request) {
 func (h *EmpresaHandler) GetEmpresaByCNPJ(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	cnpj := vars["cnpj"]
+	
+	// ADICIONAR: Decodificar URL
+	cnpj, err := url.QueryUnescape(cnpj)
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "CNPJ inválido", "Formato de CNPJ inválido")
+		return
+	}
 
 	if strings.TrimSpace(cnpj) == "" {
 		response.WriteError(w, http.StatusBadRequest, "CNPJ inválido", "CNPJ é obrigatório")
@@ -283,5 +291,5 @@ func (h *EmpresaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/empresas/{id:[0-9]+}", h.GetEmpresa).Methods("GET")
 	router.HandleFunc("/empresas/{id:[0-9]+}", h.UpdateEmpresa).Methods("PUT")
 	router.HandleFunc("/empresas/{id:[0-9]+}", h.DeleteEmpresa).Methods("DELETE")
-	router.HandleFunc("/empresas/cnpj/{cnpj}", h.GetEmpresaByCNPJ).Methods("GET")
+	router.HandleFunc("/empresas/cnpj/{cnpj:.+}", h.GetEmpresaByCNPJ).Methods("GET")
 }
