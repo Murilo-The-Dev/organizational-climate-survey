@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "../../styles/globals.css";
 
+// Definições de fontes (mantidas)
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -23,8 +24,10 @@ export default function LoginLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className={`${inter.variable} ${interMono.variable} antialiased bg-zinc-50`}>
+    // Adicionado suppressHydrationWarning aqui
+    <html lang="pt-BR" suppressHydrationWarning> 
+      {/* Adicionado suppressHydrationWarning aqui */}
+      <body className="antialiased bg-zinc-50" suppressHydrationWarning>
         {children}
       </body>
     </html>

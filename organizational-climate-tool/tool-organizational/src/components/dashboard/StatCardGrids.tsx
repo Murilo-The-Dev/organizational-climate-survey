@@ -1,8 +1,15 @@
-"use client";
-
 import StatCard from "./StatCard";
+import { DateRange } from "react-day-picker";
 
-const StatCardGrids = () => {
+interface StatCardGridsProps {
+  dateRange?: DateRange;
+}
+
+const StatCardGrids = ({ dateRange }: StatCardGridsProps) => {
+  // Aqui você pode usar dateRange para buscar dados filtrados
+  // Por enquanto, os dados são mockados
+  console.log("Date range for StatCardGrids:", dateRange);
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
@@ -18,3 +25,4 @@ const StatCardGrids = () => {
 };
 
 export default StatCardGrids;
+

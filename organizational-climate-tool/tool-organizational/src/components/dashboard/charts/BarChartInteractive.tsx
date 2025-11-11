@@ -1,7 +1,7 @@
-"use client";
-
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { DateRange } from "react-day-picker";
+import { isWithinInterval, parseISO } from "date-fns";
 
 import {
   Card,
@@ -19,7 +19,7 @@ import {
 
 export const description = "um gráfico de barras interativo";
 
-const chartData = [
+const allChartData = [
   { date: "2024-04-01", engajamento: 82, satisfacao: 78 },
   { date: "2024-04-02", engajamento: 97, satisfacao: 180 },
   { date: "2024-04-03", engajamento: 167, satisfacao: 120 },
@@ -127,16 +127,33 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function ChartBarInteractive() {
+interface ChartBarInteractiveProps {
+  dateRange?: DateRange;
+}
+
+export function ChartBarInteractive({ dateRange }: ChartBarInteractiveProps) {
   const [activeChart, setActiveChart] =
     React.useState<keyof typeof chartConfig>("engajamento");
 
+  const filteredChartData = React.useMemo(() => {
+    if (!dateRange?.from) {
+      return allChartData;
+    }
+    const startDate = dateRange.from;
+    const endDate = dateRange.to || new Date();
+
+    return allChartData.filter(item => {
+      const itemDate = parseISO(item.date);
+      return isWithinInterval(itemDate, { start: startDate, end: endDate });
+    });
+  }, [dateRange]);
+
   const total = React.useMemo(
     () => ({
-      engajamento: chartData.reduce((acc, curr) => acc + curr.engajamento, 0),
-      satisfacao: chartData.reduce((acc, curr) => acc + curr.satisfacao, 0),
+      engajamento: filteredChartData.reduce((acc, curr) => acc + curr.engajamento, 0),
+      satisfacao: filteredChartData.reduce((acc, curr) => acc + curr.satisfacao, 0),
     }),
-    []
+    [filteredChartData]
   );
 
   return (
@@ -145,7 +162,7 @@ export function ChartBarInteractive() {
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 pt-4 pb-3 sm:!py-0">
           <CardTitle>Gráfico de Barras - Interativo</CardTitle>
           <CardDescription>
-            Mostrando o total de visitantes para os últimos 3 meses
+            Mostrando o total de visitantes para o período selecionado
           </CardDescription>
         </div>
         <div className="flex">
@@ -176,7 +193,7 @@ export function ChartBarInteractive() {
         >
           <BarChart
             accessibilityLayer
-            data={chartData}
+            data={filteredChartData}
             margin={{
               left: 12,
               right: 12,
@@ -219,3 +236,4 @@ export function ChartBarInteractive() {
     </Card>
   );
 }
+

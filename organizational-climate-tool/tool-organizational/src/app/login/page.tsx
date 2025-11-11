@@ -1,10 +1,52 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: 'E-mail inválido.' }),
+  password: z.string().min(6, { message: 'A senha deve ter no mínimo 6 caracteres.' }),
+});
+
+type LoginFormInputs = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormInputs>({
+    resolver: zodResolver(loginSchema),
+  });
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const { login } = useAuth();
+  const router = useRouter();
+
+  const onSubmit = async (data: LoginFormInputs) => {
+    setLoginError(null);
+    try {
+      // Simular uma chamada de API para autenticação
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (data.email === 'test@example.com' && data.password === 'password123') {
+        // Simular a obtenção de um token real
+        const fakeToken = 'fake-jwt-token-12345';
+        login(data.email, fakeToken);
+        router.push('/dashboard'); // Redireciona para o dashboard após o login
+      } else {
+        setLoginError('Credenciais inválidas. Por favor, tente novamente.');
+      }
+    } catch (error) {
+      setLoginError('Ocorreu um erro ao tentar fazer login. Por favor, tente novamente mais tarde.');
+      console.error('Login error:', error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-blue-600 p-4">
       <div className="relative flex w-full max-w-6xl h-[600px] rounded-3xl overflow-hidden shadow-2xl bg-white">
@@ -18,17 +60,20 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid gap-2">
                   <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" placeholder="m@example.com" required />
+                  <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
+                  {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">Senha</Label>
-                  <Input id="password" type="password" required />
+                  <Input id="password" type="password" {...register('password')} />
+                  {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
                 </div>
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  Continuar
+                {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+                  {isSubmitting ? 'Carregando...' : 'Continuar'}
                 </Button>
               </form>
               <div className="mt-6 text-center text-sm">

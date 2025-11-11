@@ -31,7 +31,7 @@ const ResultadosPage = () => {
             Filtre e analise as respostas de cada pesquisa em detalhes.
           </p>
         </div>
-        <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300"> <ArrowDownToLine className="h-5 w-5" /> Exportar Relatório</Button>
+        <Button> Exportar Relatório</Button>
       </div>
 
       <Card className="mb-6">
@@ -42,7 +42,7 @@ const ResultadosPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 w-full h-full">
             <Select>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a pesquisa" />
@@ -59,7 +59,7 @@ const ResultadosPage = () => {
                 <SelectItem value="tecnologia">Tecnologia</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="md:w-fit cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-300"> <Filter className="h-5 w-5" /> Aplicar Filtros</Button>
+            <Button className="md:w-fit cursor-pointer duration-300"> <Filter className="h-5 w-5" /> Aplicar Filtros</Button>
           </div>
         </CardContent>
       </Card>

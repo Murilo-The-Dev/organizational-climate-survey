@@ -2,11 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 export default function ConfiguracoesPage() {
   return (
     <section className="container mx-auto px-4 mt-10">
-      <h1 className="w-fit text-3xl font-bold tracking-tight bg-blue-600 text-white p-2 rounded-lg">
+      <h1 className="w-fit text-3xl font-bold tracking-tight bg-blue-500 text-white p-2 rounded-lg">
         Configurações
       </h1>
       <p className="text-muted-foreground mt-2 mb-6">
