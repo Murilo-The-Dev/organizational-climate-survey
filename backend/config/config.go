@@ -41,7 +41,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Database.Port = getEnvWithDefault("DB_PORT", "5432")
 	cfg.Database.User = getEnvWithDefault("DB_USER", "postgres")
 	cfg.Database.Password = os.Getenv("DB_PASS")
-	cfg.Database.DBName = getEnvWithDefault("DB_NAME", "Atmos")
+	cfg.Database.DBName = getEnvWithDefault("DB_NAME", "organizational_climate")
 	cfg.Database.SSLMode = getEnvWithDefault("DB_SSLMODE", "disable")
 
 	cfg.JWT.Secret = os.Getenv("JWT_SECRET")
