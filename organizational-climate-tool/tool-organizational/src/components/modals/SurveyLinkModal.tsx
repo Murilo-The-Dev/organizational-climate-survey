@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 //import { Copy, QrCode } from "lucide-react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { ArrowUpDown, MoreHorizontal, Copy } from "lucide-react";
 
 interface SurveyLinkModalProps {
