@@ -5,15 +5,15 @@ import { type Pesquisa } from "../dashboard/DataTable"; // Ajuste o caminho se o
 
 // Mapeia cada status para um texto e uma classe de cor do Tailwind
 const statusConfig = {
-  concluido: {
+  completed: {
     label: "Concluído",
     color: "bg-green-500",
   },
-  em_andamento: {
+  in_progress: {
     label: "Em Andamento",
-    color: "bg-yellow-500",
+    color: "bg-yellow-500", 
   },
-  rascunho: {
+  draft: {
     label: "Rascunho",
     color: "bg-gray-500",
   },
