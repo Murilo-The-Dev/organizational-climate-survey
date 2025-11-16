@@ -152,12 +152,12 @@ const AnswerDetails = ({ question }: { question: QuestionResult }) => {
 
 export const SurveyQuestionsTab = () => {
   return (
-    <div className="overflow-y-auto pr-4 h-full">
-      <Accordion type="single" collapsible className="w-full">
+    <div className="overflow-y-auto pr-4 h-full hover:no-underline">
+      <Accordion type="single" collapsible className="w-full ">
         {mockQuestions.map((question) => (
           <AccordionItem value={question.id} key={question.id}>
             <AccordionTrigger>
-              <div className="flex items-center gap-4 text-left">
+              <div className="flex items-center gap-4 text-left hover:no-underline">
                 <Badge>{question.category || question.type}</Badge>
                 <span>{question.text}</span>
               </div>

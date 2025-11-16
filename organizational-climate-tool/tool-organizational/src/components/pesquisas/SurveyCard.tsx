@@ -44,7 +44,7 @@ export const SurveyCard = ({
           className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500"
           onClick={onViewDetails}
         >
-          <Eye className="mr-2 h-4 w-4" /> Ver mais
+          <Eye className="mr-2 h-10 w-4" /> Ver mais
         </Button>
       </CardFooter>
     </Card>

@@ -24,6 +24,8 @@ import {
 import { CreateSurveyForm } from "@/components/forms/CreateSurveyForm";
 import { SurveyDetailsModal } from "@/components/modals/SurveyDetailsModal";
 import { Pesquisa } from "@/components/dashboard/DataTable";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+
 
 type Survey = Pesquisa & {
   title: string;
