@@ -1,183 +1,160 @@
+// CreateSurveyForm.tsx
+"use client";
+
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
 
+// Definição do Schema para as Opções de Múltipla Escolha
+const optionSchema = z.object({
+  text: z.string().min(1, "A opção não pode ser vazia."),
+});
+
+// Definição do Schema para as Perguntas
 const questionSchema = z.object({
-  type: z.enum(["text", "single-choice", "multi-choice", "likert"]),
-  questionText: z.string().min(1, { message: "O texto da pergunta é obrigatório." }),
-  options: z.array(z.string().min(1, { message: "A opção não pode ser vazia." })).optional(),
+  text: z.string().min(1, "O texto da pergunta é obrigatório."),
+  type: z.enum(["text", "radio", "checkbox", "scale"], {
+    required_error: "O tipo de pergunta é obrigatório.",
+  }),
+  options: z.array(optionSchema).optional(), // Opcional para perguntas de texto
 });
 
-const createSurveySchema = z.object({
-  title: z.string().min(1, { message: "O título da pesquisa é obrigatório." }),
-  description: z.string().min(1, { message: "A descrição da pesquisa é obrigatória." }),
-  tag: z.string().min(1, { message: "A categoria da pesquisa é obrigatória." }),
-  questions: z.array(questionSchema).min(1, { message: "A pesquisa deve ter pelo menos uma pergunta." }),
+// Definição do Schema Principal
+const surveySchema = z.object({
+  title: z.string().min(3, "O título deve ter no mínimo 3 caracteres."),
+  description: z.string().optional(),
+  questions: z.array(questionSchema).min(1, "A pesquisa deve ter pelo menos 1 pergunta."),
 });
 
-type CreateSurveyFormInputs = z.infer<typeof createSurveySchema>;
+type SurveyFormData = z.infer<typeof surveySchema>;
 
-export function CreateSurveyForm() {
-  const { register, handleSubmit, control, formState: { errors, isSubmitting }, reset } = useForm<CreateSurveyFormInputs>({
-    resolver: zodResolver(createSurveySchema),
+interface CreateSurveyFormProps {
+  onClose?: () => void;
+}
+
+export function CreateSurveyForm({ onClose }: CreateSurveyFormProps) {
+  const form = useForm<SurveyFormData>({
+    resolver: zodResolver(surveySchema),
     defaultValues: {
-      questions: [{ type: "text", questionText: "", options: [] }],
+      title: "",
+      description: "",
+      questions: [{ text: "", type: "text", options: [] }],
     },
   });
 
+  // USE useFieldArray CORRETAMENTE
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: form.control,
     name: "questions",
   });
 
-  const [selectedQuestionType, setSelectedQuestionType] = useState<z.infer<typeof questionSchema>["type"]>("text");
-
-  const onSubmit = async (data: CreateSurveyFormInputs) => {
+  const onSubmit = async (data: SurveyFormData) => {
     try {
-      // Simular chamada de API para criar pesquisa
+      // Simulação de chamada de API
       await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Nova pesquisa criada:", data);
+      console.log("Nova Pesquisa:", data);
       toast.success("Pesquisa criada com sucesso!");
-      reset(); // Limpa o formulário
-      // router.push("/pesquisas"); // Redireciona para a lista de pesquisas
+      if (onClose) onClose(); // Fecha o modal após o sucesso
     } catch (error) {
-      console.error("Erro ao criar pesquisa:", error);
       toast.error("Erro ao criar pesquisa. Tente novamente.");
     }
   };
 
+  const addQuestion = () => {
+    append({ text: "", type: "text", options: [] });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="title" className="text-right">Título</Label>
-        <Input id="title" placeholder="Ex: Pesquisa de Engajamento Q3" className="col-span-3" {...register("title")} />
-        {errors.title && <p className="col-span-4 text-right text-red-500 text-sm">{errors.title.message}</p>}
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
+      {/* Título e Descrição */}
+      <div className="grid gap-2">
+        <Label htmlFor="title">Título da Pesquisa</Label>
+        <Input id="title" {...form.register("title")} />
+        {form.formState.errors.title && (
+          <p className="text-red-500 text-sm">{form.formState.errors.title.message}</p>
+        )}
       </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="description" className="text-right">Descrição</Label>
-        <Textarea id="description" placeholder="Descreva o objetivo desta pesquisa." className="col-span-3" {...register("description")} />
-        {errors.description && <p className="col-span-4 text-right text-red-500 text-sm">{errors.description.message}</p>}
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="tag" className="text-right">Categoria</Label>
-        <Select onValueChange={(value) => register("tag").onChange({ target: { value } })}>
-          <SelectTrigger id="tag" className="col-span-3">
-            <SelectValue placeholder="Selecione uma categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="engajamento">Engajamento</SelectItem>
-            <SelectItem value="lideranca">Liderança</SelectItem>
-            <SelectItem value="bem-estar">Bem-estar</SelectItem>
-            <SelectItem value="rh">RH</SelectItem>
-          </SelectContent>
-        </Select>
-        {errors.tag && <p className="col-span-4 text-right text-red-500 text-sm">{errors.tag.message}</p>}
+      <div className="grid gap-2">
+        <Label htmlFor="description">Descrição (Opcional)</Label>
+        <Textarea id="description" {...form.register("description")} />
       </div>
 
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-4">Perguntas da Pesquisa</h3>
+      {/* Seção de Perguntas */}
+      <h3 className="text-xl font-semibold mt-6">Perguntas</h3>
+      <div className="space-y-4">
         {fields.map((field, index) => (
-          <Card key={field.id} className="mb-4 p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium">Pergunta {index + 1}</h4>
-              <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)}>
-                <Trash2 className="h-4 w-4 mr-2" /> Remover
+          <Card key={field.id} className="p-4 border-l-4 border-blue-500">
+            <div className="flex justify-between items-start mb-3">
+              <h4 className="font-medium">Pergunta #{index + 1}</h4>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => remove(index)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
-            <div className="grid gap-2 mb-4">
-              <Label htmlFor={`questions.${index}.questionText`}>Texto da Pergunta</Label>
-              <Input id={`questions.${index}.questionText`} {...register(`questions.${index}.questionText`)} />
-              {errors.questions?.[index]?.questionText && <p className="text-red-500 text-sm">{errors.questions[index]?.questionText?.message}</p>}
+
+            <div className="grid gap-2 mb-3">
+              <Label htmlFor={`questions.${index}.text`}>Texto da Pergunta</Label>
+              <Input id={`questions.${index}.text`} {...form.register(`questions.${index}.text`)} />
+              {form.formState.errors.questions?.[index]?.text && (
+                <p className="text-red-500 text-sm">{form.formState.errors.questions[index].text.message}</p>
+              )}
             </div>
-            <div className="grid gap-2 mb-4">
-              <Label htmlFor={`questions.${index}.type`}>Tipo de Pergunta</Label>
+
+            <div className="grid gap-2 mb-3">
+              <Label>Tipo de Resposta</Label>
               <Select
-                onValueChange={(value: z.infer<typeof questionSchema>["type"]) => {
-                  register(`questions.${index}.type`).onChange({ target: { value } });
-                  setSelectedQuestionType(value);
-                }}
+                onValueChange={(value) => form.setValue(`questions.${index}.type`, value as any)}
                 defaultValue={field.type}
               >
-                <SelectTrigger id={`questions.${index}.type`}>
+                <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="text">Texto Livre</SelectItem>
-                  <SelectItem value="single-choice">Múltipla Escolha (Única)</SelectItem>
-                  <SelectItem value="multi-choice">Múltipla Escolha (Múltipla)</SelectItem>
-                  <SelectItem value="likert">Escala Likert</SelectItem>
+                  <SelectItem value="radio">Múltipla Escolha (Única)</SelectItem>
+                  <SelectItem value="checkbox">Múltipla Escolha (Múltipla)</SelectItem>
+                  <SelectItem value="scale">Escala (1 a 5)</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.questions?.[index]?.type && <p className="text-red-500 text-sm">{errors.questions[index]?.type?.message}</p>}
+              {form.formState.errors.questions?.[index]?.type && (
+                <p className="text-red-500 text-sm">{form.formState.errors.questions[index].type.message}</p>
+              )}
             </div>
 
-            {(field.type === "single-choice" || field.type === "multi-choice") && (
-              <div className="grid gap-2">
-                <Label>Opções</Label>
-                {field.options?.map((option, optIndex) => (
-                  <div key={optIndex} className="flex items-center gap-2">
-                    <Input
-                      placeholder="Nova opção"
-                      {...register(`questions.${index}.options.${optIndex}`)}
-                    />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => {
-                      const currentOptions = control._fields[index]?.options?.value || [];
-                      const newOptions = currentOptions.filter((_: any, i: number) => i !== optIndex);
-                      control._fields[index].options.value = newOptions;
-                      // Forçar re-render para atualizar o array de opções
-                      // Isso é um workaround, idealmente o useFieldArray deveria gerenciar isso diretamente
-                      // setForceUpdate(prev => !prev);
-                    }}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentOptions = control._fields[index]?.options?.value || [];
-                    const newOptions = [...currentOptions, ""];
-                    control._fields[index].options.value = newOptions;
-                    // setForceUpdate(prev => !prev);
-                  }}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" /> Adicionar Opção
-                </Button>
+            {/* Lógica para Opções (Apenas para Múltipla Escolha/Escala) */}
+            {(field.type === "radio" || field.type === "checkbox") && (
+              <div className="mt-4 p-3 border rounded-md">
+                <h5 className="font-medium mb-2">Opções de Resposta</h5>
+                <p className="text-sm text-muted-foreground">Lógica de opções aninhadas seria implementada aqui.</p>
               </div>
             )}
           </Card>
         ))}
-        {errors.questions && <p className="text-red-500 text-sm">{errors.questions.message}</p>}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => append({ type: "text", questionText: "", options: [] })}
-          className="mt-4"
-        >
-          <PlusCircle className="h-4 w-4 mr-2" /> Adicionar Pergunta
-        </Button>
       </div>
 
-      <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
-        {isSubmitting ? "Criando Pesquisa..." : "Criar Pesquisa"}
+      <Button type="button" variant="outline" onClick={addQuestion} className="w-full">
+        <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Pergunta
       </Button>
+
+      {/* Botão de Submissão */}
+      <div className="flex justify-end pt-4 border-t">
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Criando..." : "Criar Pesquisa"}
+        </Button>
+      </div>
     </form>
   );
 }
