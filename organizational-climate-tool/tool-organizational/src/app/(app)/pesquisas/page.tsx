@@ -141,7 +141,7 @@ const PesquisasPage = () => {
               Criar Pesquisa
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle>Criar Nova Pesquisa</DialogTitle>
               <DialogDescription>
@@ -202,7 +202,7 @@ const PesquisasPage = () => {
         open={!!selectedSurvey}
         onOpenChange={(isOpen) => !isOpen && setSelectedSurvey(null)}
       >
-        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col">
           {selectedSurvey && <SurveyDetailsModal survey={selectedSurvey} />}
         </DialogContent>
       </Dialog>

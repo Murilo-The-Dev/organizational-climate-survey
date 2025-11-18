@@ -10,7 +10,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Eye, QrCode, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import QRCode from "react-qr-code";
 
 type SurveyCardProps = {
   id: string;
