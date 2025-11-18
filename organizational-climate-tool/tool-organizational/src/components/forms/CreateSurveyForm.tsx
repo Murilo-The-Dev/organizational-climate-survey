@@ -22,9 +22,9 @@ const optionSchema = z.object({
 const questionSchema = z.object({
   text: z.string().min(1, "O texto da pergunta é obrigatório."),
   type: z.enum(["text", "radio", "checkbox", "scale"], {
-    required_error: "O tipo de pergunta é obrigatório.",
+    message: "O tipo de pergunta é obrigatório.",
   }),
-  options: z.array(optionSchema).optional(), // Opcional para perguntas de texto
+  options: z.array(optionSchema).optional(),
 });
 
 // Definição do Schema Principal
