@@ -8,9 +8,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { Eye, QrCode, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import QRCode from "react-qr-code";
 
 type SurveyCardProps = {
   id: string;
@@ -47,11 +47,8 @@ export const SurveyCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onGenerateLink(id)}>
-                Gerar Link
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onViewDetails}>Ver Detalhes</DropdownMenuItem>
+              <DropdownMenuLabel className="text-center">Ações</DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>Editar Pesquisa</DropdownMenuItem>
               <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>
             </DropdownMenuContent>
@@ -65,12 +62,21 @@ export const SurveyCard = ({
       </CardContent>
       <CardFooter className="flex justify-between items-center text-sm text-muted-foreground">
         <span>Criado em: {creationDate}</span>
-        <Button
-          className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500"
-          onClick={onViewDetails}
-        >
-          <Eye className="mr-2 h-4 w-4" /> Ver mais
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500"
+            onClick={() => onGenerateLink(id)}
+          >
+            <QrCode className="h-5 w-5" />
+          </Button>
+          <Button
+            className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 hover:text-white transition-all duration-500"
+            onClick={onViewDetails}
+          >
+            <Eye className="mr-2 h-4 w-4" /> Ver mais
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
