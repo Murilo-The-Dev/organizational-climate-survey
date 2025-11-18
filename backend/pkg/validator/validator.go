@@ -57,7 +57,11 @@ func (v *Validator) IsEmail(email string) error {
 // IsCNPJ: realiza a validação completa de um CNPJ
 // Inclui verificação de formato, dígitos repetidos e algoritmo dos dígitos verificadores
 func (v *Validator) IsCNPJ(cnpj string) error {
+	fmt.Printf("DEBUG: CNPJ recebido: '%s' (len=%d)\n", cnpj, len(cnpj))
+	
 	cnpjNumbers := cnpjRegex.ReplaceAllString(cnpj, "")
+	
+	fmt.Printf("DEBUG: CNPJ apenas números: '%s' (len=%d)\n", cnpjNumbers, len(cnpjNumbers))
 
 	if len(cnpjNumbers) != CNPJLength {
 		return ValidationError{"cnpj", "must contain 14 digits"}
@@ -68,6 +72,7 @@ func (v *Validator) IsCNPJ(cnpj string) error {
 	}
 
 	if !isValidCNPJCheckDigits(cnpjNumbers) {
+		fmt.Println("DEBUG: Dígitos verificadores inválidos")
 		return ValidationError{"cnpj", "invalid check digits"}
 	}
 
