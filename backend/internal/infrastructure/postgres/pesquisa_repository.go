@@ -367,7 +367,7 @@ func (r *PesquisaRepository) Update(ctx context.Context, pesquisa *entity.Pesqui
 	query := `
         UPDATE pesquisa 
         SET titulo = $2, descricao = $3, data_abertura = $4, data_fechamento = $5,
-            status = $6, config_recorrencia = $7
+            status = $6, qrcode_path = $7, config_recorrencia = $8
         WHERE id_pesquisa = $1
     `
 
@@ -378,6 +378,7 @@ func (r *PesquisaRepository) Update(ctx context.Context, pesquisa *entity.Pesqui
 		pesquisa.DataAbertura,
 		pesquisa.DataFechamento,
 		pesquisa.Status,
+		pesquisa.QRCodePath,
 		pesquisa.ConfigRecorrencia,
 	)
 

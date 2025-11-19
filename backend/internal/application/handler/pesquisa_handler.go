@@ -319,6 +319,17 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 
 	// Gerar caminho do QR Code baseado no link de acesso
 	qrCodePath := fmt.Sprintf("/qrcodes/%s.png", pesquisa.LinkAcesso)
+	
+	//Atualizar no banco
+	pesquisa.QRCodePath = qrCodePath
+	
+	userAdminID := h.getUserAdminIDFromContext(r)
+	clientIP := h.getClientIP(r)
+	
+	if err := h.pesquisaUseCase.Update(r.Context(), pesquisa, userAdminID, clientIP); err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro ao salvar QR Code", err.Error())
+		return
+	}
 
 	qrResponse := map[string]string{
 		"qr_code_path": qrCodePath,
@@ -332,9 +343,6 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 func (h *PesquisaHandler) validatePesquisaCreateRequest(req *dto.PesquisaCreateRequest) error {
 	if req.IDEmpresa <= 0 {
 		return fmt.Errorf("ID da empresa é obrigatório")
-	}
-	if req.IDUserAdmin <= 0 {
-		return fmt.Errorf("ID do usuário administrador é obrigatório")
 	}
 	if req.IDSetor <= 0 {
 		return fmt.Errorf("ID do setor é obrigatório")
