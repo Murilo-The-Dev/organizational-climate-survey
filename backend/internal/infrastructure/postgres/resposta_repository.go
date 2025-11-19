@@ -41,8 +41,9 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(ctx, `
-        INSERT INTO resposta (id_pergunta, id_pesquisa, valor_resposta, data_resposta)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO resposta (id_pergunta, valor_resposta, data_submissao)
+        VALUES ($1, $2, NOW())
+        RETURNING id_resposta
     `)
 	if err != nil {
 		r.logger.Error("erro ao preparar statement batch respostas: %v", err)
@@ -51,12 +52,11 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
 	defer stmt.Close()
 
 	for _, resposta := range respostas {
-		_, err := stmt.ExecContext(ctx,
+		err := stmt.QueryRowContext(ctx,
 			resposta.IDPergunta,
-			resposta.IDPesquisa,
 			resposta.ValorResposta,
-			resposta.DataResposta,
-		)
+		).Scan(&resposta.ID)
+		
 		if err != nil {
 			r.logger.Error("erro ao inserir resposta batch: %v", err)
 			return fmt.Errorf("erro ao inserir resposta: %v", err)
@@ -74,7 +74,12 @@ func (r *RespostaRepository) CreateBatch(ctx context.Context, respostas []*entit
 // CountByPesquisa conta o total de respostas de uma pesquisa
 func (r *RespostaRepository) CountByPesquisa(ctx context.Context, pesquisaID int) (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM resposta WHERE id_pesquisa = $1`
+	query := `
+		SELECT COUNT(*) 
+		FROM resposta r
+		INNER JOIN pergunta p ON r.id_pergunta = p.id_pergunta
+		WHERE p.id_pesquisa = $1
+	`
 
 	err := r.db.QueryRowContext(ctx, query, pesquisaID).Scan(&count)
 	if err != nil {
@@ -144,11 +149,12 @@ func (r *RespostaRepository) GetAggregatedByPergunta(ctx context.Context, pergun
 // Agrupadas por pergunta e valor da resposta
 func (r *RespostaRepository) GetAggregatedByPesquisa(ctx context.Context, pesquisaID int) (map[int]map[string]int, error) {
 	query := `
-        SELECT id_pergunta, valor_resposta, COUNT(*) as quantidade
-        FROM resposta 
-        WHERE id_pesquisa = $1 
-        GROUP BY id_pergunta, valor_resposta
-        ORDER BY id_pergunta, quantidade DESC
+        SELECT r.id_pergunta, r.valor_resposta, COUNT(*) as quantidade
+        FROM resposta r
+        INNER JOIN pergunta p ON r.id_pergunta = p.id_pergunta
+        WHERE p.id_pesquisa = $1 
+        GROUP BY r.id_pergunta, r.valor_resposta
+        ORDER BY r.id_pergunta, quantidade DESC
     `
 
 	rows, err := r.db.QueryContext(ctx, query, pesquisaID)
@@ -190,11 +196,12 @@ func (r *RespostaRepository) GetAggregatedByPesquisa(ctx context.Context, pesqui
 // Usado para análises temporais e relatórios
 func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesquisaID int, startDate, endDate string) ([]*entity.Resposta, error) {
 	query := `
-        SELECT id_resposta, id_pergunta, id_pesquisa, valor_resposta, data_resposta, data_submissao
-        FROM resposta 
-        WHERE id_pesquisa = $1 
-          AND data_submissao BETWEEN $2 AND $3
-        ORDER BY data_submissao
+        SELECT r.id_resposta, r.id_pergunta, r.valor_resposta, r.data_submissao
+        FROM resposta r
+        INNER JOIN pergunta p ON r.id_pergunta = p.id_pergunta
+        WHERE p.id_pesquisa = $1 
+          AND r.data_submissao BETWEEN $2 AND $3
+        ORDER BY r.data_submissao
     `
 
 	rows, err := r.db.QueryContext(ctx, query, pesquisaID, startDate, endDate)
@@ -211,9 +218,7 @@ func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesqui
 		err := rows.Scan(
 			&resposta.ID,
 			&resposta.IDPergunta,
-			&resposta.IDPesquisa,
 			&resposta.ValorResposta,
-			&resposta.DataResposta,
 			&resposta.DataSubmissao,
 		)
 		if err != nil {
@@ -235,7 +240,12 @@ func (r *RespostaRepository) GetResponsesByDateRange(ctx context.Context, pesqui
 // DeleteByPesquisa remove todas as respostas de uma pesquisa
 // Útil para limpeza de dados ou remoção de pesquisas
 func (r *RespostaRepository) DeleteByPesquisa(ctx context.Context, pesquisaID int) error {
-	query := `DELETE FROM resposta WHERE id_pesquisa = $1`
+	query := `
+		DELETE FROM resposta 
+		WHERE id_pergunta IN (
+			SELECT id_pergunta FROM pergunta WHERE id_pesquisa = $1
+		)
+	`
 
 	result, err := r.db.ExecContext(ctx, query, pesquisaID)
 	if err != nil {
