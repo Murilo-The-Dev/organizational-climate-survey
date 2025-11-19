@@ -40,23 +40,15 @@ func NewUsuarioAdministradorUseCase(
 func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, senha, clientIP string) (*entity.UsuarioAdministrador, error) {
 	usuario, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
-		if uc.logAuditoriaRepo != nil {
-			log := &entity.LogAuditoria{
-				IDUserAdmin:   0,
-				TimeStamp:     time.Now(),
-				AcaoRealizada: "Tentativa de Login Falhada",
-				Detalhes:      fmt.Sprintf("Tentativa de login com email inexistente: %s", email),
-				EnderecoIP:    clientIP,
-			}
-			uc.logAuditoriaRepo.Create(ctx, log)
-		}
+		// Não criar log para email inexistente (FK inválida)
 		return nil, fmt.Errorf("credenciais inválidas")
 	}
 
 	if usuario.Status != "Ativo" {
+		// Usar ID do usuário encontrado para o log
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
-				IDUserAdmin:   0,
+				IDUserAdmin:   usuario.ID,
 				TimeStamp:     time.Now(),
 				AcaoRealizada: "Tentativa de Login - Usuário Inativo",
 				Detalhes:      fmt.Sprintf("Tentativa de login com usuário inativo: %s (ID: %d)", email, usuario.ID),
@@ -68,9 +60,10 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 	}
 
 	if !uc.crypto.CheckPasswordHash(senha, usuario.SenhaHash) {
+		// Usar ID do usuário para o log
 		if uc.logAuditoriaRepo != nil {
 			log := &entity.LogAuditoria{
-				IDUserAdmin:   0,
+				IDUserAdmin:   usuario.ID,
 				TimeStamp:     time.Now(),
 				AcaoRealizada: "Tentativa de Login - Senha Incorreta",
 				Detalhes:      fmt.Sprintf("Senha incorreta para usuário: %s (ID: %d)", email, usuario.ID),
@@ -81,6 +74,7 @@ func (uc *UsuarioAdministradorUseCase) Authenticate(ctx context.Context, email, 
 		return nil, fmt.Errorf("credenciais inválidas")
 	}
 
+	// Login bem-sucedido
 	if uc.logAuditoriaRepo != nil {
 		log := &entity.LogAuditoria{
 			IDUserAdmin:   usuario.ID,
@@ -408,7 +402,7 @@ func (uc *UsuarioAdministradorUseCase) UpdateStatus(ctx context.Context, id int,
 	return nil
 }
 
-// Delete remove um usuário do sistema
+// Delete inativa um usuário (soft delete) em vez de deletar fisicamente
 func (uc *UsuarioAdministradorUseCase) Delete(ctx context.Context, id int, userAdminID int, enderecoIP string) error {
 	if id <= 0 {
 		return fmt.Errorf("ID do usuário inválido")
@@ -419,16 +413,22 @@ func (uc *UsuarioAdministradorUseCase) Delete(ctx context.Context, id int, userA
 		return fmt.Errorf("usuário não encontrado: %v", err)
 	}
 
-	if err := uc.repo.Delete(ctx, id); err != nil {
-		return fmt.Errorf("erro ao deletar usuário: %v", err)
+	// Verificar se já está inativo
+	if usuario.Status == "Inativo" {
+		return fmt.Errorf("usuário já está inativo")
+	}
+
+	// SOFT DELETE: Mudar status para "Inativo" em vez de deletar fisicamente
+	if err := uc.repo.UpdateStatus(ctx, id, "Inativo"); err != nil {
+		return fmt.Errorf("erro ao inativar usuário: %v", err)
 	}
 
 	if userAdminID > 0 {
 		log := &entity.LogAuditoria{
 			IDUserAdmin:   userAdminID,
 			TimeStamp:     time.Now(),
-			AcaoRealizada: "Usuário Administrador Deletado",
-			Detalhes:      fmt.Sprintf("Usuário deletado: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
+			AcaoRealizada: "Usuário Administrador Inativado",
+			Detalhes:      fmt.Sprintf("Usuário inativado (soft delete): %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
 			EnderecoIP:    enderecoIP,
 		}
 		uc.logAuditoriaRepo.Create(ctx, log)

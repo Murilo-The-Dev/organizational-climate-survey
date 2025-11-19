@@ -16,7 +16,6 @@ import (
 	"organizational-climate-survey/backend/pkg/validator"
 
 	"github.com/gorilla/mux"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // UsuarioAdministradorHandler gerencia requisições HTTP relacionadas a usuários administrativos
@@ -75,18 +74,12 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 		return
 	}
 
-	// Gerar hash bcrypt da senha
-	senhaHash, err := bcrypt.GenerateFromPassword([]byte(req.Senha), bcrypt.DefaultCost)
-	if err != nil {
-		h.log.WithContext(r.Context()).Error("Erro ao gerar hash: %v", err)
-		response.WriteError(w, http.StatusInternalServerError, "Erro ao processar senha", err.Error())
-		return
-	}
-
 	// Converter DTO para entidade de domínio
-	usuario := req.ToEntity(string(senhaHash))
+	usuario := req.ToEntity(req.Senha)
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
+
+	usuario.SenhaHash = req.Senha
 
 	// Executar caso de uso de criação
 	if err := h.usuarioUseCase.Create(r.Context(), usuario, userAdminID, clientIP); err != nil {
@@ -289,7 +282,7 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Status atualizado com sucesso", nil)
 }
 
-// DeleteUsuarioAdministrador remove usuário administrativo do sistema
+// DeleteUsuarioAdministrador inativa usuário administrativo (soft delete)
 func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -306,15 +299,15 @@ func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.Response
 			response.WriteError(w, http.StatusNotFound, "Usuário não encontrado", err.Error())
 			return
 		}
-		if strings.Contains(err.Error(), "possui") && strings.Contains(err.Error(), "vinculados") {
-			response.WriteError(w, http.StatusConflict, "Usuário possui dependências", err.Error())
+		if strings.Contains(err.Error(), "já está inativo") {
+			response.WriteError(w, http.StatusConflict, "Usuário já inativo", err.Error())
 			return
 		}
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
 
-	response.WriteSuccess(w, http.StatusOK, "Usuário deletado com sucesso", nil)
+	response.WriteSuccess(w, http.StatusOK, "Usuário inativado com sucesso", nil)
 }
 
 // GetUsuarioByEmail busca usuário administrativo por endereço de email
