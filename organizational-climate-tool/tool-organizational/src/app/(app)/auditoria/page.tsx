@@ -2,8 +2,9 @@ import { DataTable } from "@/components/dashboard/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Badge, badgeVariants } from "@/components/ui/badge";
+import type { VariantProps } from "class-variance-authority";
 
 export type AuditLog = {
   id: string;
@@ -37,26 +38,26 @@ const columns: ColumnDef<AuditLog>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status");
-      let badgeStatus: "success" | "warning" | "info" | "default" = "default";
+      let badgeVariant: VariantProps<typeof badgeVariants>["variant"];
       let badgeText = "";
-
       switch (status) {
         case "success":
-          badgeStatus = "success";
+          badgeVariant = "success";
           badgeText = "Sucesso";
           break;
         case "failed":
-          badgeStatus = "warning";
+          badgeVariant = "destructive";
           badgeText = "Falha";
           break;
         case "info":
-          badgeStatus = "info";
+          badgeVariant = "default";
           badgeText = "Info";
           break;
         default:
           badgeText = String(status);
+          badgeVariant = "secondary";
       }
-      return <StatusBadge status={badgeStatus}>{badgeText}</StatusBadge>;
+      return <Badge variant={badgeVariant}>{badgeText}</Badge>;
     },
   },
   {
@@ -73,7 +74,8 @@ const columns: ColumnDef<AuditLog>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-center">Ações</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(log.id)}>
               Copiar ID do Log
             </DropdownMenuItem>
@@ -103,4 +105,3 @@ export default function AuditoriaPage() {
     </section>
   );
 }
-
