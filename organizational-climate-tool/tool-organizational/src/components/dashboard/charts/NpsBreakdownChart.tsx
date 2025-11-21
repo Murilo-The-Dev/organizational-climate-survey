@@ -47,7 +47,9 @@ export const NpsBreakdownChart = () => (
             data={chartData}
             dataKey="count"
             nameKey="type"
-            innerRadius={60}
+            innerRadius="60%"
+            outerRadius="80%"
+            
           />
           <ChartLegend
             content={<ChartLegendContent nameKey="type" />}

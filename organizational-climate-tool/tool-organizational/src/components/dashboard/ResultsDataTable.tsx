@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -128,7 +129,8 @@ export const columns: ColumnDef<SurveyResult>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-center">Ações</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <DropdownMenuItem>Ver detalhes das respostas</DropdownMenuItem>
             <DropdownMenuItem>Ver tendência histórica</DropdownMenuItem>
           </DropdownMenuContent>

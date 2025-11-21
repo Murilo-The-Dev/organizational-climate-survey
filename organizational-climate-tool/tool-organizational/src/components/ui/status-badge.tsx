@@ -11,7 +11,7 @@ const statusConfig = {
   },
   em_andamento: {
     label: "Em Andamento",
-    color: "bg-yellow-500",
+    color: "bg-yellow-500", 
   },
   rascunho: {
     label: "Rascunho",
@@ -25,7 +25,7 @@ type StatusBadgeProps = {
   className?: string;
 };
 
-export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
+export const StatusBadge = ({ status, className,  }: StatusBadgeProps) => {
   // Pega a configuração correta ou uma padrão caso o status seja inesperado
   const config = statusConfig[status] || { label: "Desconhecido", color: "bg-gray-400" };
 

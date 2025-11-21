@@ -105,11 +105,11 @@ const columns: ColumnDef<Pesquisa>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-center">Ações</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(pesquisa.id)}>
               Copiar ID
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Editar</DropdownMenuItem>
             <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>

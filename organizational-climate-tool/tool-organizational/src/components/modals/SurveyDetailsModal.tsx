@@ -16,7 +16,7 @@ export const SurveyDetailsModal = ({ survey }: SurveyDetailsModalProps) => {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{survey.titulo}</DialogTitle>
+        <DialogTitle>{survey.title}</DialogTitle>
         <DialogDescription>
           Análise detalhada e gerenciamento da pesquisa.
         </DialogDescription>
