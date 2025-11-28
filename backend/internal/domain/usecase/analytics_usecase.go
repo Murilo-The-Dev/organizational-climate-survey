@@ -69,6 +69,7 @@ func (uc *AnalyticsUseCase) GetPesquisaMetrics(ctx context.Context, pesquisaID i
 }
 
 // GetComparisonData compara métricas entre diferentes pesquisas
+// GetComparisonData compara métricas entre diferentes pesquisas
 func (uc *AnalyticsUseCase) GetComparisonData(ctx context.Context, pesquisaIDs []int, userAdminID int, enderecoIP string) (map[string]interface{}, error) {
 	// Validações
 	if len(pesquisaIDs) == 0 {
@@ -88,7 +89,6 @@ func (uc *AnalyticsUseCase) GetComparisonData(ctx context.Context, pesquisaIDs [
 
 	// Verifica se todas as pesquisas existem e pertencem à mesma empresa
 	var empresaID int
-	pesquisaTitulos := make([]string, 0, len(pesquisaIDs))
 
 	for i, pesquisaID := range pesquisaIDs {
 		pesquisa, err := uc.pesquisaRepo.GetByID(ctx, pesquisaID)
@@ -107,8 +107,6 @@ func (uc *AnalyticsUseCase) GetComparisonData(ctx context.Context, pesquisaIDs [
 		if pesquisa.Status != "Concluída" {
 			return nil, fmt.Errorf("só é possível comparar pesquisas concluídas. Pesquisa '%s' está com status: %s", pesquisa.Titulo, pesquisa.Status)
 		}
-
-		pesquisaTitulos = append(pesquisaTitulos, pesquisa.Titulo)
 	}
 
 	comparison, err := uc.repo.GetComparisonData(ctx, pesquisaIDs)

@@ -15,19 +15,24 @@ import (
 
 // RespostaUseCase implementa casos de uso para gerenciamento de respostas
 type RespostaUseCase struct {
-	repo         repository.RespostaRepository // Repositório de respostas
-	perguntaRepo repository.PerguntaRepository // Repositório de perguntas
-	pesquisaRepo repository.PesquisaRepository // Repositório de pesquisas
+	repo              repository.RespostaRepository              // Repositório de respostas
+	perguntaRepo      repository.PerguntaRepository              // Repositório de perguntas
+	pesquisaRepo      repository.PesquisaRepository              // Repositório de pesquisas
+	submissaoUseCase  *SubmissaoPesquisaUseCase                  // NOVO: UseCase de submissões
 }
 
 // NewRespostaUseCase cria uma nova instância do caso de uso de respostas
-func NewRespostaUseCase(repo repository.RespostaRepository,
+func NewRespostaUseCase(
+	repo repository.RespostaRepository,
 	perguntaRepo repository.PerguntaRepository,
-	pesquisaRepo repository.PesquisaRepository) *RespostaUseCase {
+	pesquisaRepo repository.PesquisaRepository,
+	submissaoUseCase *SubmissaoPesquisaUseCase, // NOVO
+) *RespostaUseCase {
 	return &RespostaUseCase{
-		repo:         repo,
-		perguntaRepo: perguntaRepo,
-		pesquisaRepo: pesquisaRepo,
+		repo:             repo,
+		perguntaRepo:     perguntaRepo,
+		pesquisaRepo:     pesquisaRepo,
+		submissaoUseCase: submissaoUseCase, // NOVO
 	}
 }
 
@@ -37,6 +42,10 @@ func (uc *RespostaUseCase) ValidateResposta(resposta *entity.Resposta) error {
 		return fmt.Errorf("ID da pergunta é obrigatório")
 	}
 
+	if resposta.IDSubmissao <= 0 { // NOVO: validar IDSubmissao
+		return fmt.Errorf("ID da submissão é obrigatório")
+	}
+
 	if strings.TrimSpace(resposta.ValorResposta) == "" {
 		return fmt.Errorf("valor da resposta é obrigatório")
 	}
@@ -44,40 +53,9 @@ func (uc *RespostaUseCase) ValidateResposta(resposta *entity.Resposta) error {
 	return nil
 }
 
-// ValidateSubmissionRules valida regras de submissão de respostas
-func (uc *RespostaUseCase) ValidateSubmissionRules(ctx context.Context, perguntaID int) (*entity.Pesquisa, error) {
-	// Busca pergunta
-	pergunta, err := uc.perguntaRepo.GetByID(ctx, perguntaID)
-	if err != nil {
-		return nil, fmt.Errorf("pergunta não encontrada: %v", err)
-	}
-
-	// Busca pesquisa
-	pesquisa, err := uc.pesquisaRepo.GetByID(ctx, pergunta.IDPesquisa)
-	if err != nil {
-		return nil, fmt.Errorf("pesquisa não encontrada: %v", err)
-	}
-
-	// Valida se pesquisa está ativa
-	if pesquisa.Status != "Ativa" {
-		return nil, fmt.Errorf("pesquisa não está ativa para receber respostas")
-	}
-
-	// Valida período de abertura/fechamento
-	now := time.Now()
-
-	if pesquisa.DataAbertura != nil && now.Before(*pesquisa.DataAbertura) {
-		return nil, fmt.Errorf("pesquisa ainda não foi aberta para respostas")
-	}
-
-	if pesquisa.DataFechamento != nil && now.After(*pesquisa.DataFechamento) {
-		return nil, fmt.Errorf("período de respostas da pesquisa já foi encerrado")
-	}
-
-	return pesquisa, nil
-}
-
-func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.Resposta) error {
+// CreateBatch cria múltiplas respostas vinculadas a uma submissão anônima
+// MODIFICADO: Agora recebe tokenAcesso e valida submissão
+func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.Resposta, tokenAcesso string) error {
 	// Validações básicas
 	if len(respostas) == 0 {
 		return fmt.Errorf("lista de respostas não pode estar vazia")
@@ -87,23 +65,47 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 		return fmt.Errorf("máximo de 100 respostas por submissão")
 	}
 
-	// Valida todas as respostas e coleta IDs de perguntas
-	perguntaIDs := make(map[int]bool)
+	if strings.TrimSpace(tokenAcesso) == "" {
+		return fmt.Errorf("token de acesso é obrigatório")
+	}
 
+	// CRÍTICO: Validar token e obter submissão
+	submissao, err := uc.submissaoUseCase.ValidateToken(ctx, tokenAcesso)
+	if err != nil {
+		return fmt.Errorf("token inválido: %v", err)
+	}
+
+	// Buscar todas as perguntas da pesquisa para validação
+	perguntas, err := uc.perguntaRepo.ListByPesquisa(ctx, submissao.IDPesquisa)
+	if err != nil {
+		return fmt.Errorf("erro ao buscar perguntas: %v", err)
+	}
+
+	// Criar mapa de perguntas válidas
+	perguntasValidas := make(map[int]bool)
+	for _, p := range perguntas {
+		perguntasValidas[p.ID] = true
+	}
+
+	// Validar todas as respostas e setar IDSubmissao
+	now := time.Now()
 	for i, resposta := range respostas {
+		// Validação básica
 		if err := uc.ValidateResposta(resposta); err != nil {
 			return fmt.Errorf("resposta %d inválida: %v", i+1, err)
 		}
 
-		perguntaIDs[resposta.IDPergunta] = true
+		// CRÍTICO: Validar que pergunta pertence à pesquisa do token
+		if !perguntasValidas[resposta.IDPergunta] {
+			return fmt.Errorf("resposta %d: pergunta ID %d não pertence à pesquisa", i+1, resposta.IDPergunta)
+		}
 
-		// Define timestamps se não fornecidos
-		now := time.Now()
+		// CRÍTICO: Setar IDSubmissao (vincula ao respondente anônimo)
+		resposta.IDSubmissao = submissao.ID
+
+		// Define timestamp se não fornecido
 		if resposta.DataSubmissao.IsZero() {
 			resposta.DataSubmissao = now
-		}
-		if resposta.DataResposta.IsZero() {
-			resposta.DataResposta = now
 		}
 
 		// Valida valor da resposta baseado no tipo da pergunta
@@ -112,75 +114,25 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 		}
 	}
 
-	// Valida regras de submissão usando primeira pergunta
-	_, err := uc.ValidateSubmissionRules(ctx, respostas[0].IDPergunta)
-	if err != nil {
-		return err
-	}
-
-	// Verifica se todas as perguntas pertencem à mesma pesquisa
-	for perguntaID := range perguntaIDs {
-		pergunta, err := uc.perguntaRepo.GetByID(ctx, perguntaID)
-		if err != nil {
-			return fmt.Errorf("pergunta ID %d não encontrada: %v", perguntaID, err)
-		}
-
-		// Define IDPesquisa na resposta se não estiver definido
-		for _, resposta := range respostas {
-			if resposta.IDPergunta == perguntaID && resposta.IDPesquisa == 0 {
-				resposta.IDPesquisa = pergunta.IDPesquisa
-			}
-		}
-	}
-
-	// Cria as respostas
+	// Cria as respostas no banco (transação única)
 	if err := uc.repo.CreateBatch(ctx, respostas); err != nil {
 		return fmt.Errorf("erro ao salvar respostas: %v", err)
+	}
+
+	// CRÍTICO: Marcar submissão como completa
+	if err := uc.submissaoUseCase.CompleteSubmission(ctx, submissao.ID); err != nil {
+		// Log erro mas não falha - respostas já foram salvas
+		log.Printf("AVISO: Respostas salvas mas erro ao marcar submissão como completa (ID %d): %v", submissao.ID, err)
 	}
 
 	return nil
 }
 
-// CreateSingleResponse cria uma resposta individual
-func (uc *RespostaUseCase) CreateSingleResponse(ctx context.Context, resposta *entity.Resposta) error {
-	if err := uc.ValidateResposta(resposta); err != nil {
-		return err
-	}
+// REMOVIDO: CreateSingleResponse
+// Submissões anônimas sempre em lote vinculadas a um token
 
-	// Valida regras de submissão
-	_, err := uc.ValidateSubmissionRules(ctx, resposta.IDPergunta)
-	if err != nil {
-		return err
-	}
-
-	// Define IDPesquisa se não estiver definido
-	if resposta.IDPesquisa == 0 {
-		pergunta, err := uc.perguntaRepo.GetByID(ctx, resposta.IDPergunta)
-		if err != nil {
-			return fmt.Errorf("erro ao buscar pergunta: %v", err)
-		}
-		resposta.IDPesquisa = pergunta.IDPesquisa
-	}
-
-	// Define timestamps se não fornecidos
-	now := time.Now()
-	if resposta.DataSubmissao.IsZero() {
-		resposta.DataSubmissao = now
-	}
-	if resposta.DataResposta.IsZero() {
-		resposta.DataResposta = now
-	}
-
-	// Valida valor da resposta
-	if err := uc.ValidateResponseValue(ctx, resposta.IDPergunta, resposta.ValorResposta); err != nil {
-		return err
-	}
-
-	// Cria array com uma resposta para usar o método batch
-	respostas := []*entity.Resposta{resposta}
-
-	return uc.repo.CreateBatch(ctx, respostas)
-}
+// REMOVIDO: ValidateSubmissionRules
+// Validação agora feita via ValidateToken do SubmissaoUseCase
 
 func (uc *RespostaUseCase) CountByPesquisa(ctx context.Context, pesquisaID int) (int, error) {
 	if pesquisaID <= 0 {

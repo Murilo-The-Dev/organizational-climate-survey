@@ -38,7 +38,6 @@ organizational-climate-survey/backend/
 │   │   └── usecase/      # ✓ Casos de uso
 │   └── infrastructure/   # ✓ Implementações externas
 │       ├── auth/         # ✓ JWT, hash
-│       ├── database/     # ✓ Conexões
 │       ├── http/         # ✓ Servidor HTTP
 │       └── postgres/     # ✓ Implementações repository
 ├── migrations/           # ✓ SQL migrations

@@ -6,11 +6,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/repository"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/mux"
 )
 
 // CORSMiddleware configura políticas de compartilhamento de recursos entre origens
@@ -163,14 +167,61 @@ func PublicRouteMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// ActiveSurveyMiddleware valida se pesquisa aceita novas respostas
-func ActiveSurveyMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Ponto de extensão para validação de status da pesquisa
-		// Validação real implementada no use case
-		
-		next.ServeHTTP(w, r)
-	})
+// ActiveSurveyMiddleware valida se pesquisa está ativa e no período correto
+// Requer PesquisaRepository como dependência
+func ActiveSurveyMiddleware(pesquisaRepo repository.PesquisaRepository) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Extrair pesquisa_id da rota
+			vars := mux.Vars(r)
+			pesquisaIDStr := vars["pesquisa_id"]
+			
+			// Se não houver pesquisa_id na rota, pular validação
+			if pesquisaIDStr == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			
+			pesquisaID, err := strconv.Atoi(pesquisaIDStr)
+			if err != nil {
+				response.WriteError(w, http.StatusBadRequest, "ID inválido", "ID da pesquisa deve ser numérico")
+				return
+			}
+			
+			// Buscar pesquisa
+			pesquisa, err := pesquisaRepo.GetByID(r.Context(), pesquisaID)
+			if err != nil {
+				response.WriteError(w, http.StatusNotFound, "Pesquisa não encontrada", "A pesquisa não existe")
+				return
+			}
+			
+			// Validar status
+			if pesquisa.Status != "Ativa" {
+				response.WriteError(w, http.StatusBadRequest, "Pesquisa indisponível", "Esta pesquisa não está aceitando respostas")
+				return
+			}
+			
+			// Validar período
+			now := time.Now()
+			
+			if pesquisa.DataAbertura != nil && now.Before(*pesquisa.DataAbertura) {
+				response.WriteError(w, http.StatusBadRequest, "Fora do período", 
+					fmt.Sprintf("Pesquisa abre em: %s", pesquisa.DataAbertura.Format("02/01/2006 15:04")))
+				return
+			}
+			
+			if pesquisa.DataFechamento != nil && now.After(*pesquisa.DataFechamento) {
+				response.WriteError(w, http.StatusBadRequest, "Período encerrado", 
+					fmt.Sprintf("Pesquisa encerrou em: %s", pesquisa.DataFechamento.Format("02/01/2006 15:04")))
+				return
+			}
+			
+			// Injetar pesquisa no contexto (opcional, para evitar requery no handler)
+			ctx := context.WithValue(r.Context(), "pesquisa", pesquisa)
+			
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // ChainMiddleware compõe múltiplos middlewares em ordem de execução
@@ -221,13 +272,13 @@ func AdminMiddlewares(jwtSecret []byte) func(http.Handler) http.Handler {
 }
 
 // SurveySubmissionMiddlewares retorna cadeia de middlewares para submissão de respostas
-func SurveySubmissionMiddlewares() func(http.Handler) http.Handler {
+func SurveySubmissionMiddlewares(pesquisaRepo repository.PesquisaRepository) func(http.Handler) http.Handler {
 	return ChainMiddleware(
 		RecoveryMiddleware,
 		CORSMiddleware,
 		LoggingMiddleware,
 		RateLimitMiddleware,
 		ContentTypeMiddleware,
-		ActiveSurveyMiddleware,
+		ActiveSurveyMiddleware(pesquisaRepo),
 	)
 }

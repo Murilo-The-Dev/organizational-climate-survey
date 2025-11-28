@@ -436,3 +436,85 @@ func (uc *UsuarioAdministradorUseCase) Delete(ctx context.Context, id int, userA
 
 	return nil
 }
+
+// CreateBootstrap cria primeiro administrador do sistema sem autenticação
+// CRÍTICO: Só executa se não existir nenhum admin (bootstrap inicial)
+func (uc *UsuarioAdministradorUseCase) CreateBootstrap(ctx context.Context, usuario *entity.UsuarioAdministrador) error {
+	// Validar se sistema já foi inicializado
+	count, err := uc.repo.Count(ctx)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar admins existentes: %v", err)
+	}
+
+	if count > 0 {
+		return fmt.Errorf("sistema já inicializado com %d administradores", count)
+	}
+
+	// Validações básicas (mesmas do Create normal)
+	if usuario.IDEmpresa <= 0 {
+		return fmt.Errorf("ID da empresa é obrigatório")
+	}
+
+	if strings.TrimSpace(usuario.NomeAdmin) == "" {
+		return fmt.Errorf("nome é obrigatório")
+	}
+
+	if err := uc.ValidateEmail(usuario.Email); err != nil {
+		return err
+	}
+
+	plainPassword := usuario.SenhaHash
+	if strings.TrimSpace(plainPassword) == "" {
+		return fmt.Errorf("senha é obrigatória")
+	}
+
+	if len(plainPassword) < 8 {
+		return fmt.Errorf("senha deve ter pelo menos 8 caracteres")
+	}
+
+	// Validar empresa existe
+	_, err = uc.empresaRepo.GetByID(ctx, usuario.IDEmpresa)
+	if err != nil {
+		return fmt.Errorf("empresa não encontrada: %v", err)
+	}
+
+	// Hash da senha
+	hashedPassword, err := uc.crypto.HashPassword(plainPassword)
+	if err != nil {
+		return fmt.Errorf("erro ao processar senha: %v", err)
+	}
+	usuario.SenhaHash = hashedPassword
+
+	// Setar valores padrão
+	usuario.DataCadastro = time.Now()
+	usuario.Status = "Ativo" // Bootstrap sempre cria admin ativo
+
+	// Criar usuário SEM validar userAdminID (bootstrap não tem admin autenticado)
+	if err := uc.repo.Create(ctx, usuario); err != nil {
+		return fmt.Errorf("erro ao criar admin bootstrap: %v", err)
+	}
+
+	// OPCIONAL: Log de bootstrap (sem userAdminID pois não existe ainda)
+	if uc.logAuditoriaRepo != nil {
+		log := &entity.LogAuditoria{
+			IDUserAdmin:   usuario.ID, // Usa o ID do próprio admin criado
+			TimeStamp:     time.Now(),
+			AcaoRealizada: "Bootstrap - Primeiro Admin Criado",
+			Detalhes:      fmt.Sprintf("Sistema inicializado. Primeiro admin: %s (%s) (ID: %d)", usuario.NomeAdmin, usuario.Email, usuario.ID),
+			EnderecoIP:    "bootstrap",
+		}
+		uc.logAuditoriaRepo.Create(ctx, log)
+	}
+
+	return nil
+}
+
+// Count retorna total de administradores no sistema
+// Usado para verificar se bootstrap é necessário
+func (uc *UsuarioAdministradorUseCase) Count(ctx context.Context) (int, error) {
+	count, err := uc.repo.Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao contar administradores: %v", err)
+	}
+	return count, nil
+}

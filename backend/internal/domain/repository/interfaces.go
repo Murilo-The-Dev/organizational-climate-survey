@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	"organizational-climate-survey/backend/internal/domain/entity"
+	"time"
 )
 
 // DashboardRepository gerencia operações relacionadas aos dashboards
@@ -61,15 +62,55 @@ type PerguntaRepository interface {
 	UpdateOrdem(ctx context.Context, perguntaID int, novaOrdem int) error
 }
 
-// RespostaRepository gerencia operações relacionadas às respostas (com foco em anonimato)
+// RespostaRepository define operações de persistência para respostas de pesquisas
 type RespostaRepository interface {
+	// CreateBatch insere múltiplas respostas em uma única transação
+	// CRÍTICO: Todas as respostas DEVEM ter IDSubmissao preenchido
 	CreateBatch(ctx context.Context, respostas []*entity.Resposta) error
+	
+	// GetByID busca uma resposta específica pelo identificador
+	// Inclui dados da submissão e pergunta associadas
+	GetByID(ctx context.Context, id int) (*entity.Resposta, error)
+	
+	// CountByPesquisa retorna total de respostas de uma pesquisa
 	CountByPesquisa(ctx context.Context, pesquisaID int) (int, error)
+	
+	// CountByPergunta retorna total de respostas de uma pergunta específica
 	CountByPergunta(ctx context.Context, perguntaID int) (int, error)
+	
+	// CountBySubmissao retorna total de respostas de uma submissão
+	// Útil para validar completude (todas perguntas respondidas)
+	CountBySubmissao(ctx context.Context, submissaoID int) (int, error)
+	
+	// GetAggregatedByPergunta retorna distribuição de respostas agregadas
+	// Exemplo: {"Sim": 45, "Não": 12}
 	GetAggregatedByPergunta(ctx context.Context, perguntaID int) (map[string]int, error)
+	
+	// GetAggregatedByPesquisa retorna dados agregados de todas as perguntas
+	// Formato: map[id_pergunta]map[valor_resposta]contagem
+	// Exemplo: {1: {"Sim": 45, "Não": 12}, 2: {"8": 30, "9": 25}}
 	GetAggregatedByPesquisa(ctx context.Context, pesquisaID int) (map[int]map[string]int, error)
+	
+	// GetResponsesByDateRange retorna respostas em um período específico
+	// Datas no formato: "2006-01-02"
 	GetResponsesByDateRange(ctx context.Context, pesquisaID int, startDate, endDate string) ([]*entity.Resposta, error)
-	DeleteByPesquisa(ctx context.Context, pesquisaID int) error // Para limpeza após análise
+	
+	// GetBySubmissao busca todas as respostas de uma submissão específica
+	// Mantém vínculo entre respostas do mesmo respondente anônimo
+	GetBySubmissao(ctx context.Context, submissaoID int) ([]*entity.Resposta, error)
+	
+	// ListByPesquisa retorna todas as respostas de uma pesquisa
+	// ATENÇÃO: Não expor em endpoints públicos - dados agregados apenas
+	ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.Resposta, error)
+	
+	// DeleteByPesquisa remove todas as respostas de uma pesquisa
+	// Cascata: Remove submissões e respostas vinculadas
+	// Usar apenas para limpeza pós-análise ou LGPD
+	DeleteByPesquisa(ctx context.Context, pesquisaID int) error
+	
+	// DeleteBySubmissao remove todas as respostas de uma submissão específica
+	// Útil para casos de retração ou dados corrompidos
+	DeleteBySubmissao(ctx context.Context, submissaoID int) error
 }
 
 // SetorRepository gerencia operações relacionadas aos setores
@@ -86,13 +127,13 @@ type SetorRepository interface {
 type UsuarioAdministradorRepository interface {
 	Create(ctx context.Context, usuario *entity.UsuarioAdministrador) error
 	GetByID(ctx context.Context, id int) (*entity.UsuarioAdministrador, error)
-	GetByEmail(ctx context.Context, email string) (*entity.UsuarioAdministrador, error) // Para login
+	GetByEmail(ctx context.Context, email string) (*entity.UsuarioAdministrador, error)
+	Update(ctx context.Context, usuario *entity.UsuarioAdministrador) error
+	UpdatePassword(ctx context.Context, userID int, hashedPassword string) error
+	UpdateStatus(ctx context.Context, id int, status string) error
 	ListByEmpresa(ctx context.Context, empresaID int) ([]*entity.UsuarioAdministrador, error)
 	ListByStatus(ctx context.Context, empresaID int, status string) ([]*entity.UsuarioAdministrador, error)
-	Update(ctx context.Context, usuario *entity.UsuarioAdministrador) error
-	UpdatePassword(ctx context.Context, id int, senhaHash string) error
-	UpdateStatus(ctx context.Context, id int, status string) error
-	Delete(ctx context.Context, id int) error
+	Count(ctx context.Context) (int, error)
 }
 
 // Interfaces para operações mais complexas que podem envolver múltiplas entidades
@@ -102,4 +143,16 @@ type AnalyticsRepository interface {
 	GetPesquisaMetrics(ctx context.Context, pesquisaID int) (map[string]interface{}, error)
 	GetComparisonData(ctx context.Context, pesquisaIDs []int) (map[string]interface{}, error)
 	GetSetorComparison(ctx context.Context, empresaID int, pesquisaID int) (map[string]interface{}, error)
+}
+
+type SubmissaoPesquisaRepository interface {
+    Create(ctx context.Context, submissao *entity.SubmissaoPesquisa) error
+    GetByToken(ctx context.Context, token string) (*entity.SubmissaoPesquisa, error)
+    GetByID(ctx context.Context, id int) (*entity.SubmissaoPesquisa, error)
+    UpdateStatus(ctx context.Context, id int, status string) error
+    MarkAsCompleted(ctx context.Context, id int) error
+    CountByPesquisaAndIPHash(ctx context.Context, pesquisaID int, ipHash string, since time.Time) (int, error)
+    DeleteExpired(ctx context.Context) (int, error)
+    ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.SubmissaoPesquisa, error)
+    CountCompleteByPesquisa(ctx context.Context, pesquisaID int) (int, error)
 }
