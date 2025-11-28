@@ -61,6 +61,7 @@ type Repositories struct {
 	Pesquisa             *PesquisaRepository
 	Pergunta             *PerguntaRepository
 	Resposta             *RespostaRepository
+	SubmissaoPesquisa    *SubmissaoPesquisaRepository // NOVO
 	Dashboard            *DashboardRepository
 	LogAuditoria         *LogAuditoriaRepository
 }
@@ -75,6 +76,7 @@ func NewRepositories(db *DB) *Repositories {
 		Pesquisa:             NewPesquisaRepository(db),
 		Pergunta:             NewPerguntaRepository(db),
 		Resposta:             NewRespostaRepository(db),
+		SubmissaoPesquisa:    NewSubmissaoPesquisaRepository(db), // NOVO
 		Dashboard:            NewDashboardRepository(db),
 		LogAuditoria:         NewLogAuditoriaRepository(db),
 	}

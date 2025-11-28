@@ -8,6 +8,7 @@ import (
 
 	"organizational-climate-survey/backend/internal/application/handler"
 	"organizational-climate-survey/backend/internal/application/middleware"
+	"organizational-climate-survey/backend/internal/domain/repository"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/infrastructure/auth"
 	"organizational-climate-survey/backend/pkg/logger"
@@ -24,9 +25,12 @@ type RouterConfig struct {
 	PesquisaUseCase             *usecase.PesquisaUseCase             // Use case de pesquisa
 	PerguntaUseCase             *usecase.PerguntaUseCase             // Use case de pergunta
 	RespostaUseCase             *usecase.RespostaUseCase             // Use case de resposta
+	SubmissaoUseCase            *usecase.SubmissaoPesquisaUseCase    // Use case de submissão (NOVO)
 	DashboardUseCase            *usecase.DashboardUseCase            // Use case de dashboard
 	LogAuditoriaUseCase         *usecase.LogAuditoriaUseCase         // Use case de log
+	PesquisaRepo                repository.PesquisaRepository        // Repositório de pesquisa (NOVO - para middleware)
 	JWTSecret                   string                               // Chave secreta para JWT
+	BootstrapUseCase            *usecase.BootstrapUseCase    	// Use case de bootstrap
 }
 
 // SetupRouter configura todas as rotas da API com seus respectivos handlers
@@ -72,6 +76,16 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		respostaHandler = handler.NewRespostaHandler(config.RespostaUseCase, log)
 	}
 
+	var submissaoHandler *handler.SubmissaoHandler
+	if config.SubmissaoUseCase != nil {
+		submissaoHandler = handler.NewSubmissaoHandler(config.SubmissaoUseCase, log)
+	}
+
+	var bootstrapHandler *handler.BootstrapHandler
+	if config.BootstrapUseCase != nil {
+    bootstrapHandler = handler.NewBootstrapHandler(config.BootstrapUseCase, log, val)
+	}
+
 	var dashboardHandler *handler.DashboardHandler
 	if config.DashboardUseCase != nil {
 		dashboardHandler = handler.NewDashboardHandler(config.DashboardUseCase, log)
@@ -84,17 +98,31 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 
 	api := router.PathPrefix("/api/v1").Subrouter()
 
+	// === ROTAS PÚBLICAS (sem autenticação) ===
 	publicRoutes := api.PathPrefix("").Subrouter()
 	publicRoutes.Use(middleware.PublicMiddlewares())
 
+	// Auth (login)
 	authHandler.RegisterRoutes(publicRoutes)
 
-	if respostaHandler != nil {
+	// NOVO: Bootstrap (criar primeiro admin)
+	if bootstrapHandler != nil {
+		bootstrapHandler.RegisterRoutes(publicRoutes)
+	}
+
+	// NOVO: Gerar token de acesso à pesquisa
+	if submissaoHandler != nil {
+		submissaoHandler.RegisterRoutes(publicRoutes)
+	}
+
+	// === ROTAS DE SUBMISSÃO DE RESPOSTAS (anônimas com token) ===
+	if respostaHandler != nil && config.PesquisaRepo != nil {
 		surveyRoutes := api.PathPrefix("").Subrouter()
-		surveyRoutes.Use(middleware.SurveySubmissionMiddlewares())
+		surveyRoutes.Use(middleware.SurveySubmissionMiddlewares(config.PesquisaRepo)) // Passa repo
 		surveyRoutes.HandleFunc("/respostas/submit", respostaHandler.SubmitRespostas).Methods("POST")
 	}
 
+	// === ROTAS AUTENTICADAS (requerem JWT) ===
 	authRoutes := api.PathPrefix("").Subrouter()
 	authRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
 
@@ -117,6 +145,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		dashboardHandler.RegisterRoutes(authRoutes)
 	}
 
+	// === ROTAS ADMINISTRATIVAS (requerem JWT + permissões admin) ===
 	adminRoutes := api.PathPrefix("").Subrouter()
 	adminRoutes.Use(middleware.AdminMiddlewares([]byte(config.JWTSecret)))
 
@@ -124,6 +153,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		logHandler.RegisterRoutes(adminRoutes)
 	}
 
+	// Rotas administrativas de resposta (estatísticas, análises)
 	if respostaHandler != nil {
 		respostaAdminRoutes := api.PathPrefix("").Subrouter()
 		respostaAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
@@ -138,6 +168,14 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/stats", respostaHandler.GetStatsByPergunta).Methods("GET")
 	}
 
+	// NOVO: Estatísticas de submissão (admin)
+	if submissaoHandler != nil {
+		submissaoAdminRoutes := api.PathPrefix("").Subrouter()
+		submissaoAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
+		submissaoAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/submissions/stats", submissaoHandler.GetSubmissionStats).Methods("GET")
+	}
+
+	// Health check e documentação
 	router.HandleFunc("/health", HealthCheckHandler).Methods("GET")
 	router.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("./docs/"))))
 

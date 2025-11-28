@@ -24,6 +24,9 @@ type Config struct {
 	JWT struct {
 		Secret string // Chave secreta para JWT
 	}
+	Crypto struct {
+		HashSalt string // Salt para hashes de IP/fingerprint (submissões anônimas)
+	}
 	Log struct {
 		Level string // Nível de log (debug, info, etc.)
 	}
@@ -45,6 +48,9 @@ func LoadConfig() (*Config, error) {
 	cfg.Database.SSLMode = getEnvWithDefault("DB_SSLMODE", "disable")
 
 	cfg.JWT.Secret = os.Getenv("JWT_SECRET")
+	
+	cfg.Crypto.HashSalt = getEnvWithDefault("HASH_SALT", "default-salt-change-in-production-12345")
+	
 	cfg.Log.Level = getEnvWithDefault("LOG_LEVEL", "debug")
 
 	// Validações obrigatórias

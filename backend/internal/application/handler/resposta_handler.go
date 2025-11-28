@@ -34,35 +34,54 @@ func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase, log logger.Log
 
 // SubmitRespostas processa submissão em lote de respostas de pesquisa
 func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request) {
-	var reqs []dto.RespostaCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+	// MODIFICADO: Decodificar struct wrapper com token
+	var req dto.SubmitRespostasRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.log.WithContext(r.Context()).Warn("Decode erro: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
 	
-	if len(reqs) == 0 {
+	// Validar token obrigatório
+	if strings.TrimSpace(req.TokenAcesso) == "" {
+		h.log.WithContext(r.Context()).Info("Token não fornecido")
+		response.WriteError(w, http.StatusBadRequest, "Token obrigatório", "Token de acesso é obrigatório")
+		return
+	}
+	
+	// Validar lista de respostas
+	if len(req.Respostas) == 0 {
 		h.log.WithContext(r.Context()).Info("Nenhuma resposta enviada")
 		response.WriteError(w, http.StatusBadRequest, "Lista vazia", "Pelo menos uma resposta deve ser fornecida")
 		return
 	}
 	
 	// Validar e converter todas as respostas
-	respostas := make([]*entity.Resposta, len(reqs))
-	for i, req := range reqs {
-		if err := h.validateRespostaCreateRequest(&req); err != nil {
+	respostas := make([]*entity.Resposta, len(req.Respostas))
+	for i, respostaReq := range req.Respostas {
+		if err := h.validateRespostaCreateRequest(&respostaReq); err != nil {
 			h.log.WithContext(r.Context()).Info("Validação falhou na resposta %d: %v", i+1, err)
 			response.WriteError(w, http.StatusBadRequest, fmt.Sprintf("Erro na resposta %d", i+1), err.Error())
 			return
 		}
-		respostas[i] = req.ToEntity()
+		respostas[i] = respostaReq.ToEntity()
 	}
 	
-	// Executar caso de uso de criação em lote
-	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas); err != nil {
+	// MODIFICADO: Passar token para usecase
+	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas, req.TokenAcesso); err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao salvar respostas: %v", err)
+		
+		// Tratamento de erros específicos
+		if strings.Contains(err.Error(), "token inválido") || strings.Contains(err.Error(), "expirado") || strings.Contains(err.Error(), "já utilizado") {
+			response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+			return
+		}
 		if strings.Contains(err.Error(), "pesquisa não está ativa") {
 			response.WriteError(w, http.StatusBadRequest, "Pesquisa inativa", err.Error())
+			return
+		}
+		if strings.Contains(err.Error(), "não pertence à pesquisa") {
+			response.WriteError(w, http.StatusBadRequest, "Pergunta inválida", err.Error())
 			return
 		}
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())

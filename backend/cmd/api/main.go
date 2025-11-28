@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
+	"organizational-climate-survey/backend/config"
 	"organizational-climate-survey/backend/internal/domain/usecase"
-	"organizational-climate-survey/backend/internal/infrastructure/postgres"
 	httpRouter "organizational-climate-survey/backend/internal/infrastructure/http"
+	"organizational-climate-survey/backend/internal/infrastructure/postgres"
 	"organizational-climate-survey/backend/pkg/crypto"
 
 	"github.com/joho/godotenv"
@@ -22,27 +22,20 @@ func main() {
 		log.Println("Aviso: Não foi possível encontrar o arquivo .env, usando variáveis de ambiente do sistema.")
 	}
 
-	// Configuração da porta e JWT
-	port := getEnvWithDefault("APP_PORT", "8080")
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET não configurado nas variáveis de ambiente")
+	// Carregar configurações
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Erro ao carregar configurações: %v", err)
 	}
 
 	// Configuração e conexão com o banco de dados
-	dbConfig := &postgres.Config{
-		Host:     getEnvWithDefault("DB_HOST", "localhost"),
-		Port:     getEnvWithDefault("DB_PORT", "5432"),
-		User:     getEnvWithDefault("DB_USER", "postgres"),
-		Password: os.Getenv("DB_PASS"),
-		DBName:   getEnvWithDefault("DB_NAME", "Atmos"),
-		SSLMode:  getEnvWithDefault("DB_SSLMODE", "disable"),
-	}
-	if dbConfig.Password == "" {
-		log.Fatal("DB_PASS não configurado nas variáveis de ambiente")
-	}
-
-	db, err := postgres.NewDB(dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName)
+	db, err := postgres.NewDB(
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.DBName,
+	)
 	if err != nil {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
@@ -57,6 +50,17 @@ func main() {
 	cryptoSvc := crypto.NewDefaultCryptoService()
 	log.Println("✅ Crypto service inicializado")
 
+	// Bootstrap Use Case (não depende de outros use cases)
+	var bootstrapUseCase *usecase.BootstrapUseCase
+	if repos.Empresa != nil && repos.UsuarioAdministrador != nil {
+    bootstrapUseCase = usecase.NewBootstrapUseCase(
+        repos.Empresa,
+        repos.UsuarioAdministrador,
+        repos.LogAuditoria,
+        cryptoSvc,
+    )
+	}
+			
 	// Inicializa Use Cases
 	var empresaUseCase *usecase.EmpresaUseCase
 	if repos.Empresa != nil && repos.LogAuditoria != nil {
@@ -88,9 +92,26 @@ func main() {
 		perguntaUseCase = usecase.NewPerguntaUseCase(repos.Pergunta, repos.Resposta, repos.Pesquisa, repos.LogAuditoria)
 	}
 
+	// NOVO: SubmissaoPesquisaUseCase
+	var submissaoUseCase *usecase.SubmissaoPesquisaUseCase
+	if repos.SubmissaoPesquisa != nil && repos.Pesquisa != nil {
+		submissaoUseCase = usecase.NewSubmissaoPesquisaUseCase(
+			repos.SubmissaoPesquisa,
+			repos.Pesquisa,
+			cryptoSvc,
+			cfg.Crypto.HashSalt,
+		)
+	}
+
+	// MODIFICADO: RespostaUseCase agora depende de SubmissaoUseCase
 	var respostaUseCase *usecase.RespostaUseCase
-	if repos.Resposta != nil && repos.Pergunta != nil && repos.Pesquisa != nil {
-		respostaUseCase = usecase.NewRespostaUseCase(repos.Resposta, repos.Pergunta, repos.Pesquisa)
+	if repos.Resposta != nil && repos.Pergunta != nil && repos.Pesquisa != nil && submissaoUseCase != nil {
+		respostaUseCase = usecase.NewRespostaUseCase(
+			repos.Resposta, 
+			repos.Pergunta, 
+			repos.Pesquisa,
+			submissaoUseCase,
+		)
 	}
 	
 	var logUseCase *usecase.LogAuditoriaUseCase
@@ -112,37 +133,28 @@ func main() {
 		PesquisaUseCase:             pesquisaUseCase,
 		PerguntaUseCase:             perguntaUseCase,
 		RespostaUseCase:             respostaUseCase,
+		SubmissaoUseCase:            submissaoUseCase, 
 		DashboardUseCase:            dashboardUseCase,
 		LogAuditoriaUseCase:         logUseCase,
-		JWTSecret:                   jwtSecret,
+		PesquisaRepo:                repos.Pesquisa,   
+		JWTSecret:                   cfg.JWT.Secret,
+		BootstrapUseCase: 			 bootstrapUseCase, 
 	}
 	router := httpRouter.SetupRouter(routerConfig)
 	log.Println("✅ Router configurado")
 
 	// Inicializa servidor HTTP
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.App.Port,
 		Handler: router,
 	}
 
-	appName := getEnvWithDefault("APP_NAME", "organizational-climate-survey")
-	appEnv := getEnvWithDefault("APP_ENV", "development")
-
-	fmt.Printf("🚀 Servidor '%s' iniciado na porta %s em modo '%s'\n", appName, port, appEnv)
-	fmt.Printf("🔗 API Base URL: http://localhost:%s/api/v1\n", port)
-	fmt.Printf("📊 Health Check: http://localhost:%s/health\n", port)
-	if appEnv == "development" {
-		fmt.Printf("📚 Documentação: http://localhost:%s/docs/\n", port)
+	fmt.Printf("🚀 Servidor '%s' iniciado na porta %s em modo '%s'\n", cfg.App.Name, cfg.App.Port, cfg.App.Env)
+	fmt.Printf("🔗 API Base URL: http://localhost:%s/api/v1\n", cfg.App.Port)
+	fmt.Printf("📊 Health Check: http://localhost:%s/health\n", cfg.App.Port)
+	if cfg.App.Env == "development" {
+		fmt.Printf("📚 Documentação: http://localhost:%s/docs/\n", cfg.App.Port)
 	}
 
 	log.Fatal(server.ListenAndServe())
-}
-
-// getEnvWithDefault retorna o valor de uma variável de ambiente ou um valor padrão caso não esteja definida.
-func getEnvWithDefault(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
 }

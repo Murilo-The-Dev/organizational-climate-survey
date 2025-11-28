@@ -325,3 +325,16 @@ func (r *UsuarioAdministradorRepository) Delete(ctx context.Context, id int) err
 
 	return nil
 }
+
+// Count retorna total de administradores no sistema
+func (r *UsuarioAdministradorRepository) Count(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM usuario_administrador`
+	
+	var count int
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao contar administradores: %w", err)
+	}
+	
+	return count, nil
+}

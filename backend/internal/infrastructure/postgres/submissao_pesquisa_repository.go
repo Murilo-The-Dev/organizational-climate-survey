@@ -15,13 +15,13 @@ import (
 
 // SubmissaoPesquisaRepository implementa persistência de submissões no PostgreSQL
 type SubmissaoPesquisaRepository struct {
-	db *sql.DB
+	db *DB 
 }
 
 // NewSubmissaoPesquisaRepository cria nova instância do repositório
-func NewSubmissaoPesquisaRepository(db *sql.DB) *SubmissaoPesquisaRepository {
+func NewSubmissaoPesquisaRepository(db *DB) *SubmissaoPesquisaRepository {
 	return &SubmissaoPesquisaRepository{
-		db: db,
+		db: db, // Agora recebe *DB completo
 	}
 }
 

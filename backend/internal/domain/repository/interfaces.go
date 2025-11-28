@@ -127,13 +127,13 @@ type SetorRepository interface {
 type UsuarioAdministradorRepository interface {
 	Create(ctx context.Context, usuario *entity.UsuarioAdministrador) error
 	GetByID(ctx context.Context, id int) (*entity.UsuarioAdministrador, error)
-	GetByEmail(ctx context.Context, email string) (*entity.UsuarioAdministrador, error) // Para login
+	GetByEmail(ctx context.Context, email string) (*entity.UsuarioAdministrador, error)
+	Update(ctx context.Context, usuario *entity.UsuarioAdministrador) error
+	UpdatePassword(ctx context.Context, userID int, hashedPassword string) error
+	UpdateStatus(ctx context.Context, id int, status string) error
 	ListByEmpresa(ctx context.Context, empresaID int) ([]*entity.UsuarioAdministrador, error)
 	ListByStatus(ctx context.Context, empresaID int, status string) ([]*entity.UsuarioAdministrador, error)
-	Update(ctx context.Context, usuario *entity.UsuarioAdministrador) error
-	UpdatePassword(ctx context.Context, id int, senhaHash string) error
-	UpdateStatus(ctx context.Context, id int, status string) error
-	Delete(ctx context.Context, id int) error
+	Count(ctx context.Context) (int, error)
 }
 
 // Interfaces para operações mais complexas que podem envolver múltiplas entidades
@@ -154,5 +154,5 @@ type SubmissaoPesquisaRepository interface {
     CountByPesquisaAndIPHash(ctx context.Context, pesquisaID int, ipHash string, since time.Time) (int, error)
     DeleteExpired(ctx context.Context) (int, error)
     ListByPesquisa(ctx context.Context, pesquisaID int) ([]*entity.SubmissaoPesquisa, error)
-    CountCompleteByPesquisa(ctx context.Context, pesquisaID int) (int, error) // ADICIONAR ESTA LINHA
+    CountCompleteByPesquisa(ctx context.Context, pesquisaID int) (int, error)
 }
