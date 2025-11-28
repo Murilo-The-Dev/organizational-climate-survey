@@ -1,0 +1,13 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="deltaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb" />
+      <stop offset="100%" style="stop-color:#0891b2" />
+    </linearGradient>
+  </defs>
+  <g stroke="url(#deltaGrad)" stroke-width="12" stroke-linecap="round" fill="none">
+    <path d="M 50,15 L 65,42" />
+    <path d="M 15,85 L 38,45" />
+    <path d="M 85,85 L 72,65" />
+  </g>
+</svg>
