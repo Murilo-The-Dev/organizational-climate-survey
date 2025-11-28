@@ -1,161 +1,141 @@
-# 🏢 Sistema de Pesquisa de Clima Organizacional
+# Organizational Climate Survey - Backend
 
-<div align="center">
+ATMOS
 
-![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow)
-![Versão](https://img.shields.io/badge/Versão-1.0-blue)
-![Licença](https://img.shields.io/badge/Licença-Acadêmico-green)
+Sistema de pesquisa de clima organizacional com arquitetura limpa e separação clara de responsabilidades.
 
-**Sistema completo para coleta, análise e gestão de pesquisas de clima organizacional com garantia de anonimato e conformidade com a LGPD**
-
-</div>
-
----
-
-📖 Sobre o Projeto
-Este sistema foi desenvolvido como projeto de extensão curricular pelos alunos:
-
-Murilo do Amaral Christofoletti (8204209) - Backend
-Alexandre Ricardo Calore (8205280) - Frontend
-Geovanni Adrian de Oliveira Muniz (8203566) - Database
-Guilherme Rodrigues da Conceição (8183961) - Frontend
-
-🎯 Objetivo
-Oferecer uma solução abrangente para empresas realizarem pesquisas internas de clima organizacional, priorizando:
-
-🔒 Anonimato completo dos respondentes
-📊 Análises segmentadas por departamentos
-📈 Comparações históricas de resultados
-🔄 Automação de processos recorrentes
-⚖️ Conformidade com LGPD e regulamentações
-
-
-✨ Funcionalidades Principais
-👨‍💼 Para Administradores (RH)
-
-✅ Criação de pesquisas com formulários customizáveis
-✅ Gestão de empresas e setores organizacionais
-✅ Geração automática de links e QR Codes
-✅ Agendamento de pesquisas recorrentes
-✅ Dashboards interativos com métricas em tempo real
-✅ Exportação de relatórios (Excel, PDF, CSV)
-✅ Auditoria completa de ações no sistema
-
-👥 Para Respondentes (Colaboradores)
-
-✅ Acesso anônimo via link ou QR Code
-✅ Interface responsiva para qualquer dispositivo
-✅ Múltiplos tipos de pergunta (múltipla escolha, escala Likert, texto livre)
-✅ Proteção contra múltiplas submissões
-✅ Experiência intuitiva sem necessidade de cadastro
-
-🏢 Para Empresas
-
-✅ Análise segmentada por setores e equipes
-✅ Comparações históricas de indicadores
-✅ Insights acionáveis para tomada de decisão
-✅ Conformidade total com LGPD
-
-### Arquitetura de Sistema
-
-```
-Stack Tecnológica
-Frontend        Backend         Database       
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ 
-│  Next.js 14 │ │   Go 1.21+  │ │PostgreSQL 15│
-│ TypeScript  │ │ Gorilla Mux │ │    pgx/v5   │ 
-│  Tailwind   │ │     JWT     │ │  Migrations │ 
-│   Recharts  │ │   Swagger   │ │   Indexes   │ 
-└─────────────┘ └─────────────┘ └─────────────┘ 
-
-```
-
-## 🛡️ Segurança e Conformidade
-
-### 🔒 Medidas de Segurança Implementadas
-- **JWT Authentication** com refresh tokens
-- **Rate Limiting** em endpoints sensíveis  
-- **CORS** configurado adequadamente
-- **SQL Injection** prevenção via ORM/prepared statements
-- **XSS Protection** com sanitização de inputs
-- **HTTPS** obrigatório em produção
-- **Logs de auditoria** completos
-
-### ⚖️ Conformidade LGPD
-- **Anonimização completa** de respostas
-- **Minimização de dados** - apenas dados necessários
-- **Transparência** - usuários informados sobre tratamento
-- **Direito de exclusão** - dados podem ser removidos
-- **Logs de auditoria** para rastreabilidade
-- **Criptografia** em dados sensíveis
+## 📌 Funcionalidades Principais
+- Autenticação de administradores via login e senha (JWT).
+- Cadastro de empresas, setores e usuários administradores.
+- Criação, edição e agendamento de pesquisas.
+- Coleta de respostas anônimas.
+- Dashboards analíticos e exportação de relatórios.
+- Logs de auditoria para ações administrativas.
 
 ---
 
-### 📝 Padrões de Código
+## 🚀 Tecnologias Utilizadas
+- **Go** (linguagem principal).
+- **Postgres** (banco de dados relacional).
+- **godotenv** (carregar variáveis de ambiente).
+- **jwt-go** (autenticação com JSON Web Tokens).
 
-#### Commits
+------
+
+## 📁 Estrutura do Projeto
+
+organizational-climate-survey/backend/
+├── cmd/api/              # ✓ Entry point
+├── config/               # ✓ Configurações
+├── internal/
+│   ├── application/      # ✓ Camada de aplicação
+│   │   ├── dto/          # ✓ Data Transfer Objects
+│   │   ├── handler/      # ✓ HTTP handlers
+│   │   └── middleware/   # ✓ Middlewares específicos
+│   ├── domain/           # ✓ Regras de negócio
+│   │   ├── entity/       # ✓ Entidades
+│   │   ├── repository/   # ✓ Interfaces
+│   │   └── usecase/      # ✓ Casos de uso
+│   └── infrastructure/   # ✓ Implementações externas
+│       ├── auth/         # ✓ JWT, hash
+│       ├── database/     # ✓ Conexões
+│       ├── http/         # ✓ Servidor HTTP
+│       └── postgres/     # ✓ Implementações repository
+├── migrations/           # ✓ SQL migrations
+├── pkg/
+├── .env                              # Variáveis de ambiente
+├── go.mod                            # Dependências do módulo Go
+├── go.sum                            # Checksums das dependências
+└── README.md                         # Documentação do projeto
+
+## 🏗️ Arquitetura
+
+### Clean Architecture
+
+O projeto segue os princípios da Clean Architecture com separação clara de responsabilidades:
+
+**1. Domain Layer (internal/domain/)**
+- Contém as regras de negócio fundamentais
+- Independente de frameworks e implementações externas
+- Entities: Representação das entidades de negócio
+- Repository Interfaces: Contratos para acesso a dados
+- Use Cases: Orquestração de lógica de negócio
+
+**2. Application Layer (internal/application/)**
+- Camada de adaptação entre HTTP e domínio
+- DTOs: Transformação de dados entre camadas
+- Handlers: Processamento de requisições HTTP
+- Middlewares: Interceptação de requisições
+
+**3. Infrastructure Layer (internal/infrastructure/)**
+- Implementações concretas de detalhes técnicos
+- Database: Conexões e transações
+- Auth: JWT, bcrypt, tokens
+- HTTP: Servidor e configuração de rotas
+- Postgres: Implementações SQL dos repositórios
+
+**4. Package Layer (pkg/)**
+- Utilitários reutilizáveis e independentes
+- Validações, logging, helpers
+
+### Fluxo de Requisição
+
+HTTP Request
+↓
+Middleware (Auth, CORS, Logger)
+↓
+Handler (application/handler)
+↓
+DTO Validation
+↓
+Use Case (domain/usecase)
+↓
+Entity Business Logic (domain/entity)
+↓
+Repository Interface (domain/repository)
+↓
+Repository Implementation (infrastructure/postgres)
+↓
+Database
+
+## 🔐 Segurança
+
+- **Autenticação:** JWT com refresh tokens
+- **Passwords:** Bcrypt com custo configurável
+- **Validação:** Validação robusta de entrada com validator package
+- **Auditoria:** Logs detalhados de todas as operações sensíveis
+- **CORS:** Configuração restritiva para APIs
+
+## 📊 Logging
+
+Sistema de logging estruturado com:
+- Níveis configuráveis (DEBUG, INFO, WARN, ERROR, FATAL)
+- Context propagation para request tracing
+- Fields injection para dados estruturados
+- Caller information para debugging
+
+## 🗄️ Banco de Dados
+
+- PostgreSQL como SGBD principal
+- Migrações versionadas com up/down
+- Transações gerenciadas na camada de infrastructure
+- Connection pooling configurável
+
+## 🚀 Executando o Projeto
 ```bash
-feat(auth): adiciona endpoint de refresh token
-fix(dashboard): corrige cálculo de percentuais
-docs(api): atualiza documentação dos endpoints
-test(survey): adiciona testes para criação de pesquisa
-```
+# Instalar dependências
+go mod download
 
----
+# Executar migrações
+make migrate-up
 
-## 📞 Suporte e Comunidade
-
-### 🐛 Reportar Bugs
-Encontrou um problema? [Abra uma issue](https://github.com/Murilo-The-Dev/sistema-clima-organizacional/issues) com:
-- Descrição detalhada do problema
-- Passos para reproduzir
-- Screenshots (se aplicável)
-- Ambiente (OS, browser, versões)
-
-### 💡 Sugerir Melhorias
-Tem uma ideia? [Abra uma feature request](https://github.com/Murilo-The-Dev/sistema-clima-organizacional/issues/new?template=feature_request.md)
-
-### 📧 Contato da Equipe
-- **Murilo Christofoletti** - [@murilo_christofoletti](https://github.com/Murilo-The-Dev)
-- **Geovanni Muniz** - [@geovanni_adri](https://github.com/geovanniz) 
-- **Guilherme Conceição** - [@rodriguesg.dev](https://github.com/rodriguesdev-ui)
-- **Alexandre Calore** - [@alexandre_calore1](https://github.com/AlexandreCalore)
-
----
-
-## 🏆 Reconhecimentos
-
-### 📚 Tecnologias Utilizadas
-- [Next.js](https://nextjs.org/) - Framework React
-- [Golang](https://golang.org/) - Linguagem backend
-- [Postgres](https://www.postgresql.org) - Banco de dados
-- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
-- [Recharts](https://recharts.org/) - Biblioteca de gráficos
-- [JWT](https://jwt.io/) - Autenticação
-- [Docker](https://docker.com/) - Containerização
+# Iniciar servidor
+go run cmd/api/main.go
 
 
-### 🎓 Instituição
-Projeto desenvolvido como **Extensão Curricular** do Centro Universitário Claretiano com foco em aplicação prática de conhecimentos acadêmicos em cenário real.
+📦 Dependências Principais
 
----
-
-## 📄 Licença
-
-Este projeto é um **trabalho acadêmico** desenvolvido para fins educacionais. 
-
-Para uso comercial ou adaptações, entre em contato com a equipe de desenvolvimento.
-
----
-
-<div align="center">
-
-**⭐ Se este projeto foi útil, considere dar uma estrela!**
-
-**🤝 Contribuições são sempre bem-vindas!**
-
----
-
-Feito com ❤️ pela equipe de Extensão Curricular
-
-</div>
+gorilla/mux - Roteamento HTTP
+jackc/pgx/v5 - Driver PostgreSQL
+golang-jwt/jwt/v5 - Autenticação JWT
+golang.org/x/crypto - Bcrypt para senhas
