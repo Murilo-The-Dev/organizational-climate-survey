@@ -65,9 +65,9 @@ Oferecer uma solução abrangente para empresas realizarem pesquisas internas de
 Frontend        Backend         Database        Deploy
 ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
 │  Next.js 14 │ │   Go 1.21+  │ │  MySQL 8.0  │ │   Docker    │
-│ TypeScript  │ │     Gin     │ │    GORM     │ │  Railway    │
+│ TypeScript  │ │     Gin     │ │    GORM     │ │   Railway   │
 │  Tailwind   │ │     JWT     │ │   Redis*    │ │   Vercel    │
-│   Recharts  │ │   Swagger   │ │  Migrations │ │     CI/CD   │
+│   Recharts  │ │             │ │  Migrations │ │    CI/CD    │
 └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
