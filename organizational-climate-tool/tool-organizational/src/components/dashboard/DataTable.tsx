@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table";
 import { ExportButton } from "@/components/ui/export-button";
 
-const dadosPesquisas: Pesquisa[] = [
+export const dadosPesquisas: Pesquisa[] = [
   { id: "PESQ-001", 
     title: "Engajamento Q1 2025", 
     status: "concluido", participantes: 152, 
@@ -108,53 +108,6 @@ const dadosPesquisas: Pesquisa[] = [
     participantes: 110, 
     dataCriacao: "2025-09-05" 
   },
-  { id: "PESQ-003", 
-    title: "Engajamento Q1 2025", 
-    status: "concluido", participantes: 152, 
-    dataCriacao: "2025-03-28" 
-  },
-  { id: "PESQ-004", 
-    title: "Feedback de Liderança H1", 
-    status: "concluido", 
-    participantes: 140, 
-    dataCriacao: "2025-06-15" 
-  },
-  { id: "PESQ-005", 
-    title: "Pesquisa de Satisfação Anual 2024", 
-    status: "concluido", 
-    participantes: 180, 
-    dataCriacao: "2024-12-20"
-   },
-  { id: "PESQ-006", 
-    title: "Clima Organizacional H2", 
-    status: "em_andamento", 
-    participantes: 125, 
-    dataCriacao: "2025-09-01" 
-  },
-  { id: "PESQ-007", 
-    title: "Onboarding Novos Contratados", 
-    status: "em_andamento", 
-    participantes: 25, 
-    dataCriacao: "2025-09-10" 
-  },
-  { id: "PESQ-008", 
-    title: "Avaliação de Benefícios", 
-    status: "rascunho", 
-    participantes: 0, 
-    dataCriacao: "2025-09-18" 
-  },
-  { id: "PESQ-009", 
-    title: "Engajamento Q2 2025", 
-    status: "concluido", 
-    participantes: 0, 
-    dataCriacao: "2025-09-15" 
-  },
-  { id: "PESQ-010", 
-    title: "Segurança Psicológica", 
-    status: "concluido", 
-    participantes: 165, 
-    dataCriacao: "2025-01-30" 
-  },
 ];
 
 export type Pesquisa = {
@@ -165,12 +118,111 @@ export type Pesquisa = {
   dataCriacao: string;
 };
 
-interface DataTableProps<TData extends object> {
+export const columns: ColumnDef<Pesquisa>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "title",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Título
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => <div className="font-medium">{row.getValue("title")}</div>,
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
+  },
+  {
+    accessorKey: "participantes",
+    header: () => <div className="text-right">Participantes</div>,
+    cell: ({ row }) => {
+      const amount = parseInt(row.getValue("participantes"), 10);
+      return <div className="text-right font-medium">{amount}</div>;
+    },
+  },
+  {
+    accessorKey: "dataCriacao",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Data de Criação
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("dataCriacao"));
+      return <div className="text-left">{date.toLocaleDateString("pt-BR")}</div>;
+    },
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row, table }) => {
+      const survey = row.original;
+      const { onOpenExternalDataModal } = (table.options.meta as any) || {};
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Abrir menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => onOpenExternalDataModal?.(survey)}>
+              Inserir Dados de RH
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
+];
+
+interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData>[];
   data: TData[];
+  meta?: {
+    onOpenExternalDataModal?: (survey: TData) => void;
+  };
 }
 
-export function DataTable<TData extends object>({ columns, data }: DataTableProps<TData>) {
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  meta,
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -190,6 +242,7 @@ export function DataTable<TData extends object>({ columns, data }: DataTableProp
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    meta,
     state: {
       sorting,
       columnFilters,
@@ -316,4 +369,3 @@ export function DataTable<TData extends object>({ columns, data }: DataTableProp
     </div>
   );
 }
-
