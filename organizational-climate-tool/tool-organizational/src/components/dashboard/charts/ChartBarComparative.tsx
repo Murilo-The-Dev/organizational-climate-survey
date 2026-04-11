@@ -72,10 +72,15 @@ export function ChartBarComparative({ dateRange }: ChartBarComparativeProps) {
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => `${value}%`}
+            />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent />}
+              content={<ChartTooltipContent valueFormatter={(value) => `${value}%`} />}
             />
             <Legend />
             <Bar dataKey="q1" fill="#2B7FFF" />
@@ -87,4 +92,3 @@ export function ChartBarComparative({ dateRange }: ChartBarComparativeProps) {
     </Card>
   );
 }
-
