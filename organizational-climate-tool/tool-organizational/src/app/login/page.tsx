@@ -7,43 +7,40 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Suspense } from 'react';
 import * as z from 'zod';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { AxiosError } from 'axios';
+import type { ApiResponse } from '@/lib/api';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'E-mail inválido.' }),
-  password: z.string().min(6, { message: 'A senha deve ter no mínimo 6 caracteres.' }),
+  password: z.string().min(8, { message: 'A senha deve ter no mínimo 8 caracteres.' }),
 });
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
   });
   const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const onSubmit = async (data: LoginFormInputs) => {
     setLoginError(null);
     try {
-      // Simular uma chamada de API para autenticação
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      if (data.email === 'test@example.com' && data.password === 'password123') {
-        // Simular a obtenção de um token real
-        const fakeToken = 'fake-jwt-token-12345';
-        login(data.email, fakeToken);
-        router.push('/dashboard'); // Redireciona para o dashboard após o login
-      } else {
-        setLoginError('Credenciais inválidas. Por favor, tente novamente.');
-      }
-    } catch (error) {
-      setLoginError('Ocorreu um erro ao tentar fazer login. Por favor, tente novamente mais tarde.');
-      console.error('Login error:', error);
+      await login(data.email, data.password);
+      const redirect = searchParams.get('redirect') || '/dashboard';
+      router.push(redirect);
+    } catch (err) {
+      const axiosError = err as AxiosError<ApiResponse<unknown>>;
+      const message = axiosError.response?.data?.message || axiosError.response?.data?.error;
+      setLoginError(message || 'Ocorreu um erro ao tentar fazer login. Tente novamente.');
     }
   };
 
@@ -88,10 +85,17 @@ export default function LoginPage() {
 
         {/* Lado direito: Gradiente de fundo */}
         <div className="flex-1 bg-gradient-to-br from-blue-500 to-blue-800 hidden md:flex items-center justify-center">
-          {/* Conteúdo opcional para o lado direito, como uma imagem ou ilustração */}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
 

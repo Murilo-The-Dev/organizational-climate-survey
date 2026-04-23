@@ -12,6 +12,10 @@ import { PlusCircle, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
+import { pesquisaService } from "@/lib/services/pesquisaService";
+import { perguntaService } from "@/lib/services/perguntaService";
+import type { TipoPergunta } from "@/lib/types";
 
 // Definição do Schema para as Opções de Múltipla Escolha
 const optionSchema = z.object({
@@ -36,11 +40,19 @@ const surveySchema = z.object({
 
 type SurveyFormData = z.infer<typeof surveySchema>;
 
+const tipoMap: Record<string, TipoPergunta> = {
+  text: "TextoLivre",
+  radio: "MultiplaEscolha",
+  checkbox: "MultiplaEscolha",
+  scale: "EscalaNumerica",
+};
+
 interface CreateSurveyFormProps {
   onClose?: () => void;
 }
 
 export function CreateSurveyForm({ onClose }: CreateSurveyFormProps) {
+  const { user } = useAuth();
   const form = useForm<SurveyFormData>({
     resolver: zodResolver(surveySchema),
     defaultValues: {
@@ -50,20 +62,36 @@ export function CreateSurveyForm({ onClose }: CreateSurveyFormProps) {
     },
   });
 
-  // USE useFieldArray CORRETAMENTE
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "questions",
   });
 
   const onSubmit = async (data: SurveyFormData) => {
+    if (!user?.empresa_id) return;
     try {
-      // Simulação de chamada de API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Nova Pesquisa:", data);
+      const pesquisa = await pesquisaService.create(user.empresa_id, {
+        titulo: data.title,
+        descricao: data.description || "",
+        id_setor: 0,
+        anonimato: true,
+      });
+
+      await perguntaService.createBatch(
+        pesquisa.id_pesquisa,
+        data.questions.map((q, i) => ({
+          texto_pergunta: q.text,
+          tipo_pergunta: tipoMap[q.type],
+          ordem_exibicao: i + 1,
+          opcoes_resposta: q.options?.length
+            ? JSON.stringify(q.options.map((o) => o.text))
+            : undefined,
+        }))
+      );
+
       toast.success("Pesquisa criada com sucesso!");
-      if (onClose) onClose(); // Fecha o modal após o sucesso
-    } catch (error) {
+      if (onClose) onClose();
+    } catch {
       toast.error("Erro ao criar pesquisa. Tente novamente.");
     }
   };

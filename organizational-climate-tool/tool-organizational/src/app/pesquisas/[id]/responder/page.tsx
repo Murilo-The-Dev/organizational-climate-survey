@@ -8,12 +8,163 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { use } from "react";
+import { use, useEffect, useState } from "react";
+import { pesquisaService } from "@/lib/services/pesquisaService";
+import { respostaService } from "@/lib/services/respostaService";
+import type { Pesquisa, Pergunta } from "@/lib/types";
+
+const answerSchema = z.object({
+  id_pergunta: z.number(),
+  valor_resposta: z.string().min(1, "Resposta obrigatória."),
+});
+
+const formSchema = z.object({
+  answers: z.array(answerSchema),
+});
+
+type FormInputs = z.infer<typeof formSchema>;
+
+export default function PublicSurveyResponsePage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { id } = use(params);
+  const [pesquisa, setPesquisa] = useState<Pesquisa | null>(null);
+  const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    pesquisaService.getFormularioPublico(id)
+      .then(({ pesquisa: p, perguntas: qs }) => {
+        setPesquisa(p);
+        setPerguntas(qs);
+      })
+      .catch(() => toast.error("Pesquisa não encontrada ou não está ativa."))
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  const { handleSubmit, setValue, watch, formState: { isSubmitting } } = useForm<FormInputs>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { answers: [] },
+  });
+
+  useEffect(() => {
+    if (perguntas.length) {
+      setValue("answers", perguntas.map((q) => ({ id_pergunta: q.id_pergunta, valor_resposta: "" })));
+    }
+  }, [perguntas, setValue]);
+
+  const onSubmit = async (data: FormInputs) => {
+    if (!pesquisa) return;
+    try {
+      await respostaService.submit({
+        id_pesquisa: pesquisa.id_pesquisa,
+        respostas: data.answers.map((a) => ({
+          id_pergunta: a.id_pergunta,
+          valor_resposta: a.valor_resposta,
+        })),
+      });
+      toast.success("Resposta enviada com sucesso!");
+      router.push(`/pesquisas/${id}/agradecimento`);
+    } catch {
+      toast.error("Erro ao enviar resposta. Tente novamente.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+        <div className="w-full max-w-3xl space-y-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!pesquisa) return null;
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+      <Card className="w-full max-w-3xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold">{pesquisa.titulo}</CardTitle>
+          <CardDescription className="text-gray-600 mt-2">{pesquisa.descricao}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {perguntas.map((pergunta, index) => {
+              const opcoes: string[] = pergunta.opcoes_resposta
+                ? JSON.parse(pergunta.opcoes_resposta)
+                : [];
+              const currentValue = watch(`answers.${index}.valor_resposta`);
+
+              return (
+                <div key={pergunta.id_pergunta} className="space-y-4 border-b pb-6 last:border-b-0 last:pb-0">
+                  <Label className="text-lg font-semibold">
+                    {index + 1}. {pergunta.texto_pergunta}
+                  </Label>
+
+                  {pergunta.tipo_pergunta === "TextoLivre" && (
+                    <Textarea
+                      placeholder="Digite sua resposta aqui..."
+                      value={currentValue}
+                      onChange={(e) => setValue(`answers.${index}.valor_resposta`, e.target.value)}
+                    />
+                  )}
+
+                  {pergunta.tipo_pergunta === "MultiplaEscolha" && opcoes.length > 0 && (
+                    <RadioGroup
+                      value={currentValue}
+                      onValueChange={(v) => setValue(`answers.${index}.valor_resposta`, v)}
+                    >
+                      {opcoes.map((opcao, i) => (
+                        <div key={i} className="flex items-center space-x-2">
+                          <RadioGroupItem value={opcao} id={`${pergunta.id_pergunta}-${i}`} />
+                          <Label htmlFor={`${pergunta.id_pergunta}-${i}`}>{opcao}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {pergunta.tipo_pergunta === "EscalaNumerica" && (
+                    <div className="space-y-4">
+                      <Slider
+                        defaultValue={[5]}
+                        min={1}
+                        max={10}
+                        step={1}
+                        onValueChange={(v) => setValue(`answers.${index}.valor_resposta`, String(v[0]))}
+                        className="w-[80%]"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Valor selecionado: <span className="font-medium">{currentValue || "—"}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Enviando..." : "Enviar Resposta"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
 // Esquemas de validação para os tipos de pergunta
 const answerSchema = z.object({
