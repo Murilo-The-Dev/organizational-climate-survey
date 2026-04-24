@@ -12,8 +12,8 @@ import (
 // RespostaCreateRequest representa os dados necessários para registrar
 // uma nova resposta associada a uma pergunta de pesquisa.
 type RespostaCreateRequest struct {
-	IDPergunta    int    `json:"id_pergunta"`    // Identificador da pergunta respondida
-	ValorResposta string `json:"valor_resposta"` // Conteúdo textual ou valor da resposta
+	IDPergunta    int    `json:"id_pergunta" example:"15"`   // Identificador da pergunta respondida
+	ValorResposta string `json:"valor_resposta" example:"5"` // Conteúdo textual ou valor da resposta
 }
 
 // ToEntity converte o DTO em uma entidade de domínio Resposta,

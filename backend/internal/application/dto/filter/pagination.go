@@ -3,10 +3,10 @@ package filter
 
 // PaginationRequest define os parâmetros de paginação e ordenação.
 type PaginationRequest struct {
-	Page    int    `form:"page" binding:"omitempty,gte=1"`           // Número da página, começa em 1
-	Limit   int    `form:"limit" binding:"omitempty,gte=1,lte=100"` // Quantidade de itens por página
-	OrderBy string `form:"order_by"`                                 // Campo para ordenação
-	Order   string `form:"order" binding:"omitempty,oneof=asc desc"` // Ordem ascendente ou descendente
+	Page    int    `form:"page" binding:"omitempty,gte=1" example:"1"`              // Número da página, começa em 1
+	Limit   int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`    // Quantidade de itens por página
+	OrderBy string `form:"order_by" example:"data_criacao"`                         // Campo para ordenação
+	Order   string `form:"order" binding:"omitempty,oneof=asc desc" example:"desc"` // Ordem ascendente ou descendente
 }
 
 // SetDefaults define valores padrão caso os campos não sejam fornecidos.

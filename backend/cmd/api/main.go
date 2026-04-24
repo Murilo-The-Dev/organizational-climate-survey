@@ -7,6 +7,9 @@ import (
 	"net/http"
 
 	"organizational-climate-survey/backend/config"
+	_ "organizational-climate-survey/backend/docs"
+	"organizational-climate-survey/backend/internal/application/middleware"
+	"organizational-climate-survey/backend/internal/application/scheduler"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	httpRouter "organizational-climate-survey/backend/internal/infrastructure/http"
 	"organizational-climate-survey/backend/internal/infrastructure/postgres"
@@ -14,6 +17,25 @@ import (
 
 	"github.com/joho/godotenv"
 )
+
+// @title API de Pesquisa de Clima Organizacional
+// @version 1.0
+// @description API REST para gestão de empresas, pesquisas, dashboards, auditoria e submissões anônimas.
+// @description
+// @description Fluxo sugerido para clientes frontend:
+// @description 1) Autenticar em /auth/login
+// @description 2) Enviar token JWT no header Authorization: Bearer <token>
+// @description 3) Consumir endpoints protegidos em /api/v1
+// @description
+// @termsOfService https://example.com/terms
+// @contact.name Equipe Backend
+// @contact.email backend@example.com
+// @license.name Proprietary
+// @BasePath /
+// @schemes http https
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// Carrega variáveis de ambiente do .env, se existir
@@ -35,12 +57,19 @@ func main() {
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.DBName,
+		cfg.Database.SSLMode,
+		cfg.Database.MaxOpenConns,
+		cfg.Database.MaxIdleConns,
+		cfg.Database.ConnMaxLifetimeMins,
 	)
 	if err != nil {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
 	defer db.Close()
 	log.Println("✅ Conexão com banco de dados estabelecida")
+
+	// Configura middlewares globais de seguranca/limites.
+	middleware.ConfigureSecurityMiddleware(cfg.App.FrontendURL, cfg.App.RequestBodyLimitBytes)
 
 	// Inicializa repositórios
 	repos := postgres.NewRepositories(db)
@@ -53,25 +82,25 @@ func main() {
 	// Bootstrap Use Case (não depende de outros use cases)
 	var bootstrapUseCase *usecase.BootstrapUseCase
 	if repos.Empresa != nil && repos.UsuarioAdministrador != nil {
-    bootstrapUseCase = usecase.NewBootstrapUseCase(
-        repos.Empresa,
-        repos.UsuarioAdministrador,
-        repos.LogAuditoria,
-        cryptoSvc,
-    )
+		bootstrapUseCase = usecase.NewBootstrapUseCase(
+			repos.Empresa,
+			repos.UsuarioAdministrador,
+			repos.LogAuditoria,
+			cryptoSvc,
+		)
 	}
-			
+
 	// Inicializa Use Cases
 	var empresaUseCase *usecase.EmpresaUseCase
 	if repos.Empresa != nil && repos.LogAuditoria != nil {
 		empresaUseCase = usecase.NewEmpresaUseCase(repos.Empresa, repos.LogAuditoria)
 	}
 
-	var usuarioUseCase *usecase.UsuarioAdministradorUseCase  
+	var usuarioUseCase *usecase.UsuarioAdministradorUseCase
 	if repos.UsuarioAdministrador != nil && repos.Empresa != nil && repos.LogAuditoria != nil {
 		usuarioUseCase = usecase.NewUsuarioAdministradorUseCase(
-			repos.UsuarioAdministrador, 
-			repos.Empresa, 
+			repos.UsuarioAdministrador,
+			repos.Empresa,
 			repos.LogAuditoria,
 			cryptoSvc,
 		)
@@ -107,13 +136,13 @@ func main() {
 	var respostaUseCase *usecase.RespostaUseCase
 	if repos.Resposta != nil && repos.Pergunta != nil && repos.Pesquisa != nil && submissaoUseCase != nil {
 		respostaUseCase = usecase.NewRespostaUseCase(
-			repos.Resposta, 
-			repos.Pergunta, 
+			repos.Resposta,
+			repos.Pergunta,
 			repos.Pesquisa,
 			submissaoUseCase,
 		)
 	}
-	
+
 	var logUseCase *usecase.LogAuditoriaUseCase
 	if repos.LogAuditoria != nil && repos.UsuarioAdministrador != nil && repos.Empresa != nil {
 		logUseCase = usecase.NewLogAuditoriaUseCase(repos.LogAuditoria, repos.UsuarioAdministrador, repos.Empresa)
@@ -121,9 +150,26 @@ func main() {
 
 	var dashboardUseCase *usecase.DashboardUseCase
 	if repos.Dashboard != nil && repos.Pesquisa != nil && repos.Empresa != nil && repos.LogAuditoria != nil {
-		dashboardUseCase = usecase.NewDashboardUseCase(repos.Dashboard, repos.Pesquisa, repos.Empresa, repos.LogAuditoria)
+		dashboardUseCase = usecase.NewDashboardUseCase(repos.Dashboard, repos.Pesquisa, repos.Pergunta, repos.Resposta, repos.Empresa, repos.LogAuditoria)
 	}
 	log.Println("✅ Use cases inicializados")
+
+	var recurringScheduler *scheduler.RecurringSurveyScheduler
+	if repos.Empresa != nil && repos.Pesquisa != nil && repos.Pergunta != nil && repos.Dashboard != nil {
+		recurringScheduler = scheduler.NewRecurringSurveyScheduler(
+			repos.Empresa,
+			repos.Pesquisa,
+			repos.Pergunta,
+			repos.Dashboard,
+			nil,
+		)
+		if err := recurringScheduler.Start(); err != nil {
+			log.Printf("⚠️ Falha ao iniciar scheduler de recorrência: %v", err)
+		} else {
+			defer recurringScheduler.Stop()
+			log.Println("✅ Scheduler de recorrência iniciado")
+		}
+	}
 
 	// Configuração do router HTTP
 	routerConfig := &httpRouter.RouterConfig{
@@ -133,12 +179,12 @@ func main() {
 		PesquisaUseCase:             pesquisaUseCase,
 		PerguntaUseCase:             perguntaUseCase,
 		RespostaUseCase:             respostaUseCase,
-		SubmissaoUseCase:            submissaoUseCase, 
+		SubmissaoUseCase:            submissaoUseCase,
 		DashboardUseCase:            dashboardUseCase,
 		LogAuditoriaUseCase:         logUseCase,
-		PesquisaRepo:                repos.Pesquisa,   
+		PesquisaRepo:                repos.Pesquisa,
 		JWTSecret:                   cfg.JWT.Secret,
-		BootstrapUseCase: 			 bootstrapUseCase, 
+		BootstrapUseCase:            bootstrapUseCase,
 	}
 	router := httpRouter.SetupRouter(routerConfig)
 	log.Println("✅ Router configurado")
@@ -152,6 +198,7 @@ func main() {
 	fmt.Printf("🚀 Servidor '%s' iniciado na porta %s em modo '%s'\n", cfg.App.Name, cfg.App.Port, cfg.App.Env)
 	fmt.Printf("🔗 API Base URL: http://localhost:%s/api/v1\n", cfg.App.Port)
 	fmt.Printf("📊 Health Check: http://localhost:%s/health\n", cfg.App.Port)
+	fmt.Printf("📘 Swagger UI: http://localhost:%s/swagger/index.html\n", cfg.App.Port)
 	if cfg.App.Env == "development" {
 		fmt.Printf("📚 Documentação: http://localhost:%s/docs/\n", cfg.App.Port)
 	}

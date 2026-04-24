@@ -12,16 +12,16 @@ import (
 // EmpresaCreateRequest representa os dados necessários para o registro
 // de uma nova empresa no sistema.
 type EmpresaCreateRequest struct {
-	NomeFantasia string `json:"nome_fantasia" binding:"required,min=2,max=255"` // Nome comercial da empresa (obrigatório)
-	RazaoSocial  string `json:"razao_social" binding:"required,min=2,max=255"`  // Razão social registrada (obrigatória)
-	CNPJ         string `json:"cnpj" binding:"required,len=18"`                 // CNPJ formatado (obrigatório e com validação de tamanho)
+	NomeFantasia string `json:"nome_fantasia" binding:"required,min=2,max=255" example:"Acme"`               // Nome comercial da empresa (obrigatório)
+	RazaoSocial  string `json:"razao_social" binding:"required,min=2,max=255" example:"Acme Industria LTDA"` // Razão social registrada (obrigatória)
+	CNPJ         string `json:"cnpj" binding:"required,len=18" example:"12.345.678/0001-90"`                 // CNPJ formatado (obrigatório e com validação de tamanho)
 }
 
 // EmpresaUpdateRequest define os campos opcionais permitidos na atualização
 // de uma empresa existente.
 type EmpresaUpdateRequest struct {
-	NomeFantasia *string `json:"nome_fantasia,omitempty" binding:"omitempty,min=2,max=255"` // Novo nome fantasia (opcional)
-	RazaoSocial  *string `json:"razao_social,omitempty" binding:"omitempty,min=2,max=255"`  // Nova razão social (opcional)
+	NomeFantasia *string `json:"nome_fantasia,omitempty" binding:"omitempty,min=2,max=255" example:"Acme Brasil"`     // Novo nome fantasia (opcional)
+	RazaoSocial  *string `json:"razao_social,omitempty" binding:"omitempty,min=2,max=255" example:"Acme Brasil LTDA"` // Nova razão social (opcional)
 }
 
 // ToEntity converte o DTO de criação em uma instância da entidade de domínio Empresa,

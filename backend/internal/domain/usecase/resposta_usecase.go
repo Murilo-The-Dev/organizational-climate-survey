@@ -15,10 +15,10 @@ import (
 
 // RespostaUseCase implementa casos de uso para gerenciamento de respostas
 type RespostaUseCase struct {
-	repo              repository.RespostaRepository              // Repositório de respostas
-	perguntaRepo      repository.PerguntaRepository              // Repositório de perguntas
-	pesquisaRepo      repository.PesquisaRepository              // Repositório de pesquisas
-	submissaoUseCase  *SubmissaoPesquisaUseCase                  // NOVO: UseCase de submissões
+	repo             repository.RespostaRepository // Repositório de respostas
+	perguntaRepo     repository.PerguntaRepository // Repositório de perguntas
+	pesquisaRepo     repository.PesquisaRepository // Repositório de pesquisas
+	submissaoUseCase *SubmissaoPesquisaUseCase     // NOVO: UseCase de submissões
 }
 
 // NewRespostaUseCase cria uma nova instância do caso de uso de respostas
@@ -90,6 +90,9 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 	// Validar todas as respostas e setar IDSubmissao
 	now := time.Now()
 	for i, resposta := range respostas {
+		// CRÍTICO: Setar IDSubmissao antes das validações.
+		resposta.IDSubmissao = submissao.ID
+
 		// Validação básica
 		if err := uc.ValidateResposta(resposta); err != nil {
 			return fmt.Errorf("resposta %d inválida: %v", i+1, err)
@@ -99,9 +102,6 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 		if !perguntasValidas[resposta.IDPergunta] {
 			return fmt.Errorf("resposta %d: pergunta ID %d não pertence à pesquisa", i+1, resposta.IDPergunta)
 		}
-
-		// CRÍTICO: Setar IDSubmissao (vincula ao respondente anônimo)
-		resposta.IDSubmissao = submissao.ID
 
 		// Define timestamp se não fornecido
 		if resposta.DataSubmissao.IsZero() {
@@ -278,6 +278,23 @@ func (uc *RespostaUseCase) DeleteByPesquisa(ctx context.Context, pesquisaID int,
 	log.Printf("Respostas excluídas da pesquisa %d: %d respostas removidas. Motivo: %s. Admin ID: %d",
 		pesquisaID, count, motivo, userAdminID)
 
+	return nil
+}
+
+// DeletePersonalDataBySubmissao anonimiza dados pessoais da submissão sem remover respostas.
+func (uc *RespostaUseCase) DeletePersonalDataBySubmissao(ctx context.Context, submissaoID int, userAdminID int, motivo string) error {
+	if submissaoID <= 0 {
+		return fmt.Errorf("ID da submissão deve ser maior que zero")
+	}
+	if strings.TrimSpace(motivo) == "" {
+		return fmt.Errorf("motivo da anonimização é obrigatório")
+	}
+
+	if err := uc.submissaoUseCase.AnonymizePersonalData(ctx, submissaoID); err != nil {
+		return err
+	}
+
+	log.Printf("Dados pessoais anonimizados para submissão %d. Motivo: %s. Admin ID: %d", submissaoID, motivo, userAdminID)
 	return nil
 }
 

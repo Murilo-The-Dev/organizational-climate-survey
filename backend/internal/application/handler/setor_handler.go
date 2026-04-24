@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
 	"strconv"
@@ -32,6 +32,17 @@ func NewSetorHandler(setorUseCase *usecase.SetorUseCase, log logger.Logger) *Set
 }
 
 // CreateSetor cria novo setor organizacional no sistema
+// @Summary Criar setor
+// @Tags setores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.SetorCreateRequest true "Dados do setor"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/setores [post]
 func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 	var req dto.SetorCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -39,19 +50,19 @@ func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
 	}
-	
+
 	// Validar campos obrigatórios e regras de negócio
 	if err := h.validateSetorCreateRequest(&req); err != nil {
 		h.log.WithContext(r.Context()).Info("Validação falhou: %v", err)
 		response.WriteError(w, http.StatusBadRequest, "Validação falhou", err.Error())
 		return
 	}
-	
+
 	// Converter DTO para entidade de domínio
 	setor := req.ToEntity()
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-	
+
 	// Executar caso de uso de criação
 	if err := h.setorUseCase.Create(r.Context(), setor, userAdminID, clientIP); err != nil {
 		h.log.WithFields(map[string]interface{}{"user_admin_id": userAdminID, "client_ip": clientIP}).Error("Erro ao criar setor: %v", err)
@@ -62,12 +73,22 @@ func (h *SetorHandler) CreateSetor(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
-	
+
 	h.log.WithFields(map[string]interface{}{"setor_id": setor.ID, "user_admin_id": userAdminID}).Info("Setor criado com sucesso")
 	response.WriteSuccess(w, http.StatusCreated, "Setor criado com sucesso", h.toSetorResponse(setor))
 }
 
 // GetSetor busca setor organizacional por ID
+// @Summary Buscar setor por ID
+// @Tags setores
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do setor"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/setores/{id} [get]
 func (h *SetorHandler) GetSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -91,6 +112,15 @@ func (h *SetorHandler) GetSetor(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListSetoresByEmpresa lista todos os setores de uma empresa específica
+// @Summary Listar setores por empresa
+// @Tags setores
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/setores [get]
 func (h *SetorHandler) ListSetoresByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -115,6 +145,19 @@ func (h *SetorHandler) ListSetoresByEmpresa(w http.ResponseWriter, r *http.Reque
 }
 
 // UpdateSetor atualiza dados de setor organizacional existente
+// @Summary Atualizar setor
+// @Tags setores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do setor"
+// @Param body body dto.SetorUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/setores/{id} [put]
 func (h *SetorHandler) UpdateSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -161,6 +204,17 @@ func (h *SetorHandler) UpdateSetor(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteSetor remove setor organizacional do sistema
+// @Summary Remover setor
+// @Tags setores
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do setor"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/setores/{id} [delete]
 func (h *SetorHandler) DeleteSetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -189,6 +243,17 @@ func (h *SetorHandler) DeleteSetor(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetSetorByNome busca setor organizacional por nome dentro de uma empresa
+// @Summary Buscar setor por nome
+// @Tags setores
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param nome path string true "Nome do setor"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/setores/nome/{nome} [get]
 func (h *SetorHandler) GetSetorByNome(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])

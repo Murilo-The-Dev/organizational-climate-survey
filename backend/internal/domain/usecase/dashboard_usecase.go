@@ -26,11 +26,15 @@ type DashboardUseCase struct {
 // NewDashboardUseCase cria uma nova instância do caso de uso de dashboards
 func NewDashboardUseCase(repo repository.DashboardRepository,
 	pesquisaRepo repository.PesquisaRepository,
+	perguntaRepo repository.PerguntaRepository,
+	respostaRepo repository.RespostaRepository,
 	empresaRepo repository.EmpresaRepository,
 	logRepo repository.LogAuditoriaRepository) *DashboardUseCase {
 	return &DashboardUseCase{
 		repo:             repo,
 		pesquisaRepo:     pesquisaRepo,
+		perguntaRepo:     perguntaRepo,
+		respostaRepo:     respostaRepo,
 		empresaRepo:      empresaRepo,
 		logAuditoriaRepo: logRepo,
 	}
@@ -320,12 +324,11 @@ func (uc *DashboardUseCase) GenerateReport(ctx context.Context, dashboardID int,
 		uc.logAuditoriaRepo.Create(ctx, log)
 	}
 
-	// Aqui seria implementada a lógica de geração do relatório
-	// Por enquanto, retorna dados simulados
-	reportContent := fmt.Sprintf("Relatório do Dashboard: %s\nFormato: %s\nPesquisa: %s\nGerado em: %s",
-		dashboard.Titulo, format, pesquisa.Titulo, time.Now().Format("2006-01-02 15:04:05"))
+	if uc.perguntaRepo == nil || uc.respostaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
+	}
 
-	return []byte(reportContent), nil
+	return uc.generateDashboardReport(ctx, dashboard, pesquisa, format)
 }
 
 // GetDashboardData obtém dados processados do dashboard
@@ -334,6 +337,9 @@ func (uc *DashboardUseCase) GetDashboardData(ctx context.Context, dashboardID in
 	dashboard, err := uc.repo.GetByID(ctx, dashboardID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard não encontrado: %v", err)
+	}
+	if uc.respostaRepo == nil || uc.perguntaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
 	}
 
 	// Usar método que existe para buscar dados agregados
@@ -517,6 +523,9 @@ func (uc *DashboardUseCase) GetDashboardMetrics(ctx context.Context, dashboardID
 	dashboard, err := uc.repo.GetByID(ctx, dashboardID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard não encontrado: %v", err)
+	}
+	if uc.respostaRepo == nil || uc.perguntaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
 	}
 
 	// Buscar dados reais usando métodos corretos

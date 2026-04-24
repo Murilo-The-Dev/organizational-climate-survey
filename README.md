@@ -126,7 +126,7 @@ docker-compose exec backend go run migrations/migrate.go
 # 5. Acesse a aplicação
 # Frontend: http://localhost:3000
 # Backend API: http://localhost:8080
-# Documentação API: http://localhost:8080/swagger
+# Documentação API: http://localhost:8080/swagger/index.html
 ```
 
 ### ⚙️ Setup Manual (Desenvolvimento)
@@ -329,7 +329,8 @@ npm run test:coverage
 - [👤 Manual do Usuário](docs/user-guide.md)
 
 ### 🔌 API Reference
-- [📡 Swagger Documentation](http://localhost:8080/swagger)
+- [📡 Swagger Documentation](http://localhost:8080/swagger/index.html)
+- [📘 Guia da API para Frontend](backend/docs/API_GUIDE.md)
 - [🛠️ Endpoints Reference](docs/api/endpoints.md)
 - [🔐 Autenticação](docs/api/authentication.md)
 - [📊 Analytics APIs](docs/api/analytics.md)
@@ -419,7 +420,7 @@ Authorization: Bearer <token>
 </details>
 
 ### 📖 Documentação Completa da API
-Acesse [http://localhost:8080/swagger](http://localhost:8080/swagger) após iniciar o backend.
+Acesse [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) após iniciar o backend.
 
 ---
 

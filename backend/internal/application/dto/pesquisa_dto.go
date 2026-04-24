@@ -14,26 +14,26 @@ import (
 // PesquisaCreateRequest representa os dados necessários para criar uma nova pesquisa.
 // Inclui metadados da empresa, setor, configuração de recorrência e controle de datas.
 type PesquisaCreateRequest struct {
-	IDEmpresa         int     `json:"id_empresa" binding:"required,gt=0"`                                // Identificador da empresa (obrigatório)
-	IDUserAdmin       int     `json:"id_user_admin" binding:"required,gt=0"`                             // Identificador do usuário administrador criador (obrigatório)
-	IDSetor           int     `json:"id_setor" binding:"required,gt=0"`                                  // Identificador do setor vinculado (obrigatório)
-	Titulo            string  `json:"titulo" binding:"required,min=3,max=255"`                           // Título da pesquisa (obrigatório)
-	Descricao         string  `json:"descricao" binding:"max=1000"`                                      // Descrição detalhada (opcional)
-	Status            string  `json:"status" binding:"required,oneof=Rascunho Ativa Concluída Arquivada"` // Estado da pesquisa
-	ConfigRecorrencia *string `json:"config_recorrencia,omitempty"`                                      // Definição de recorrência automática (opcional)
-	Anonimato         bool    `json:"anonimato"`                                                         // Indica se as respostas são anônimas
-	DataAbertura      *string `json:"data_abertura,omitempty"`                                           // Data de início no formato RFC3339 (opcional)
-	DataFechamento    *string `json:"data_fechamento,omitempty"`                                         // Data de término no formato RFC3339 (opcional)
+	IDEmpresa         int     `json:"id_empresa" binding:"required,gt=0" example:"1"`                                     // Identificador da empresa (obrigatório)
+	IDUserAdmin       int     `json:"id_user_admin" binding:"required,gt=0" example:"1"`                                  // Identificador do usuário administrador criador (obrigatório)
+	IDSetor           int     `json:"id_setor" binding:"required,gt=0" example:"2"`                                       // Identificador do setor vinculado (obrigatório)
+	Titulo            string  `json:"titulo" binding:"required,min=3,max=255" example:"Pesquisa de Clima 2026"`           // Título da pesquisa (obrigatório)
+	Descricao         string  `json:"descricao" binding:"max=1000" example:"Avaliação anual de clima organizacional"`     // Descrição detalhada (opcional)
+	Status            string  `json:"status" binding:"required,oneof=Rascunho Ativa Concluída Arquivada" example:"Ativa"` // Estado da pesquisa
+	ConfigRecorrencia *string `json:"config_recorrencia,omitempty" example:"mensal"`                                      // Definição de recorrência automática (opcional)
+	Anonimato         bool    `json:"anonimato" example:"true"`                                                           // Indica se as respostas são anônimas
+	DataAbertura      *string `json:"data_abertura,omitempty" example:"2026-01-10T09:00:00Z"`                             // Data de início no formato RFC3339 (opcional)
+	DataFechamento    *string `json:"data_fechamento,omitempty" example:"2026-01-31T23:59:59Z"`                           // Data de término no formato RFC3339 (opcional)
 }
 
 // PesquisaUpdateRequest representa os campos permitidos para atualização parcial de uma pesquisa existente.
 type PesquisaUpdateRequest struct {
-	Titulo            *string `json:"titulo,omitempty" binding:"omitempty,min=3,max=255"`                           // Novo título (opcional)
-	Descricao         *string `json:"descricao,omitempty" binding:"omitempty,max=1000"`                             // Nova descrição (opcional)
-	Status            *string `json:"status,omitempty" binding:"omitempty,oneof=Rascunho Ativa Concluída Arquivada"` // Novo status (opcional)
-	ConfigRecorrencia *string `json:"config_recorrencia,omitempty"`                                                 // Atualização da configuração de recorrência (opcional)
-	DataAbertura      *string `json:"data_abertura,omitempty"`                                                      // Nova data de abertura no formato RFC3339 (opcional)
-	DataFechamento    *string `json:"data_fechamento,omitempty"`                                                    // Nova data de fechamento no formato RFC3339 (opcional)
+	Titulo            *string `json:"titulo,omitempty" binding:"omitempty,min=3,max=255" example:"Pulso Semanal"`                        // Novo título (opcional)
+	Descricao         *string `json:"descricao,omitempty" binding:"omitempty,max=1000" example:"Levantamento rápido de bem-estar"`       // Nova descrição (opcional)
+	Status            *string `json:"status,omitempty" binding:"omitempty,oneof=Rascunho Ativa Concluída Arquivada" example:"Concluída"` // Novo status (opcional)
+	ConfigRecorrencia *string `json:"config_recorrencia,omitempty" example:"semanal"`                                                    // Atualização da configuração de recorrência (opcional)
+	DataAbertura      *string `json:"data_abertura,omitempty" example:"2026-02-01T09:00:00Z"`                                            // Nova data de abertura no formato RFC3339 (opcional)
+	DataFechamento    *string `json:"data_fechamento,omitempty" example:"2026-02-07T23:59:59Z"`                                          // Nova data de fechamento no formato RFC3339 (opcional)
 }
 
 // ToEntity converte a requisição de criação em uma entidade de domínio Pesquisa,

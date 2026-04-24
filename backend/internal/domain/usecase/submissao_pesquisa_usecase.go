@@ -50,6 +50,18 @@ func (uc *SubmissaoPesquisaUseCase) GenerateAccessToken(
 	clientIP string,
 	fingerprint string,
 ) (string, time.Time, error) {
+	return uc.GenerateAccessTokenWithMetadata(ctx, pesquisaID, clientIP, fingerprint, "", "")
+}
+
+// GenerateAccessTokenWithMetadata gera token com sinais adicionais para heurística antifraude.
+func (uc *SubmissaoPesquisaUseCase) GenerateAccessTokenWithMetadata(
+	ctx context.Context,
+	pesquisaID int,
+	clientIP string,
+	fingerprint string,
+	userAgent string,
+	acceptLanguage string,
+) (string, time.Time, error) {
 	// Validar ID da pesquisa
 	if pesquisaID <= 0 {
 		return "", time.Time{}, fmt.Errorf("ID da pesquisa inválido")
@@ -79,6 +91,8 @@ func (uc *SubmissaoPesquisaUseCase) GenerateAccessToken(
 
 	// Gerar hash do IP para rate limiting (não identificação)
 	ipHash := uc.hashIP(clientIP)
+	userAgentHash := uc.hashSignal(userAgent)
+	acceptLanguageHash := uc.hashSignal(acceptLanguage)
 
 	// Validar rate limit: máximo N tokens por IP na última hora
 	lastHour := now.Add(-1 * time.Hour)
@@ -89,6 +103,22 @@ func (uc *SubmissaoPesquisaUseCase) GenerateAccessToken(
 
 	if count >= uc.rateLimitMax {
 		return "", time.Time{}, fmt.Errorf("limite de tentativas excedido. Tente novamente em 1 hora")
+	}
+
+	// Heurística anti-fraude: bloqueia quando 2 de 3 sinais coincidem em janela de 24h.
+	duplicateCount, err := uc.repo.CountByPesquisaAndSignals(
+		ctx,
+		pesquisaID,
+		ipHash,
+		userAgentHash,
+		acceptLanguageHash,
+		now.Add(-24*time.Hour),
+	)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("erro ao verificar duplicidade: %v", err)
+	}
+	if duplicateCount > 0 {
+		return "", time.Time{}, fmt.Errorf("Você já respondeu esta pesquisa.")
 	}
 
 	// Gerar token criptograficamente seguro usando CryptoService
@@ -102,6 +132,7 @@ func (uc *SubmissaoPesquisaUseCase) GenerateAccessToken(
 	if fingerprint != "" {
 		fingerprintHash = uc.hashFingerprint(fingerprint)
 	}
+	fingerprintComposto := uc.hashFingerprint(fmt.Sprintf("%s|%s|%s|%s", ipHash, userAgentHash, acceptLanguageHash, fingerprintHash))
 
 	// Calcular expiração
 	expiresAt := now.Add(uc.tokenTTL)
@@ -112,6 +143,9 @@ func (uc *SubmissaoPesquisaUseCase) GenerateAccessToken(
 		TokenAcesso:     token,
 		IPHash:          ipHash,
 		FingerprintHash: fingerprintHash,
+		UserAgentHash:   userAgentHash,
+		AcceptLangHash:  acceptLanguageHash,
+		FingerprintComp: fingerprintComposto,
 		Status:          "pendente",
 		DataCriacao:     now,
 		DataExpiracao:   expiresAt,
@@ -230,6 +264,20 @@ func (uc *SubmissaoPesquisaUseCase) GetSubmissionStats(ctx context.Context, pesq
 	return stats, nil
 }
 
+// AnonymizePersonalData remove dados pessoais rastreáveis de uma submissão específica.
+func (uc *SubmissaoPesquisaUseCase) AnonymizePersonalData(ctx context.Context, submissaoID int) error {
+	if submissaoID <= 0 {
+		return fmt.Errorf("ID da submissão inválido")
+	}
+
+	anonymizedToken := "anon-" + uuid.NewString()
+	if err := uc.repo.AnonymizePersonalData(ctx, submissaoID, anonymizedToken); err != nil {
+		return fmt.Errorf("erro ao anonimizar dados pessoais da submissão: %v", err)
+	}
+
+	return nil
+}
+
 // generateSecureToken gera token criptograficamente seguro
 // Formato: UUID base + token aleatório de 32 bytes do CryptoService
 func (uc *SubmissaoPesquisaUseCase) generateSecureToken(pesquisaID int) (string, error) {
@@ -264,6 +312,15 @@ func (uc *SubmissaoPesquisaUseCase) hashFingerprint(fingerprint string) string {
 	}
 	hasher := sha256.New()
 	hasher.Write([]byte(fingerprint + uc.hashSalt))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func (uc *SubmissaoPesquisaUseCase) hashSignal(value string) string {
+	if value == "" {
+		return ""
+	}
+	hasher := sha256.New()
+	hasher.Write([]byte(value + uc.hashSalt))
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 

@@ -15,7 +15,7 @@ import (
 
 // SubmissaoPesquisaRepository implementa persistência de submissões no PostgreSQL
 type SubmissaoPesquisaRepository struct {
-	db *DB 
+	db *DB
 }
 
 // NewSubmissaoPesquisaRepository cria nova instância do repositório
@@ -33,10 +33,13 @@ func (r *SubmissaoPesquisaRepository) Create(ctx context.Context, submissao *ent
 			token_acesso,
 			ip_hash,
 			fingerprint_hash,
+			user_agent_hash,
+			accept_language_hash,
+			fingerprint_composto,
 			status,
 			data_criacao,
 			data_expiracao
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id_submissao
 	`
 
@@ -47,6 +50,9 @@ func (r *SubmissaoPesquisaRepository) Create(ctx context.Context, submissao *ent
 		submissao.TokenAcesso,
 		submissao.IPHash,
 		submissao.FingerprintHash,
+		submissao.UserAgentHash,
+		submissao.AcceptLangHash,
+		submissao.FingerprintComp,
 		submissao.Status,
 		submissao.DataCriacao,
 		submissao.DataExpiracao,
@@ -69,6 +75,9 @@ func (r *SubmissaoPesquisaRepository) GetByToken(ctx context.Context, token stri
 			token_acesso,
 			ip_hash,
 			fingerprint_hash,
+			user_agent_hash,
+			accept_language_hash,
+			fingerprint_composto,
 			status,
 			data_criacao,
 			data_expiracao,
@@ -88,6 +97,9 @@ func (r *SubmissaoPesquisaRepository) GetByToken(ctx context.Context, token stri
 		&submissao.TokenAcesso,
 		&submissao.IPHash,
 		&submissao.FingerprintHash,
+		&submissao.UserAgentHash,
+		&submissao.AcceptLangHash,
+		&submissao.FingerprintComp,
 		&submissao.Status,
 		&submissao.DataCriacao,
 		&submissao.DataExpiracao,
@@ -118,6 +130,9 @@ func (r *SubmissaoPesquisaRepository) GetByID(ctx context.Context, id int) (*ent
 			token_acesso,
 			ip_hash,
 			fingerprint_hash,
+			user_agent_hash,
+			accept_language_hash,
+			fingerprint_composto,
 			status,
 			data_criacao,
 			data_expiracao,
@@ -135,6 +150,9 @@ func (r *SubmissaoPesquisaRepository) GetByID(ctx context.Context, id int) (*ent
 		&submissao.TokenAcesso,
 		&submissao.IPHash,
 		&submissao.FingerprintHash,
+		&submissao.UserAgentHash,
+		&submissao.AcceptLangHash,
+		&submissao.FingerprintComp,
 		&submissao.Status,
 		&submissao.DataCriacao,
 		&submissao.DataExpiracao,
@@ -229,6 +247,34 @@ func (r *SubmissaoPesquisaRepository) CountByPesquisaAndIPHash(ctx context.Conte
 	return count, nil
 }
 
+// CountByPesquisaAndSignals conta submissões com 2 de 3 sinais coincidentes (IP, User-Agent, Accept-Language).
+func (r *SubmissaoPesquisaRepository) CountByPesquisaAndSignals(
+	ctx context.Context,
+	pesquisaID int,
+	ipHash, userAgentHash, acceptLanguageHash string,
+	since time.Time,
+) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM submissao_pesquisa
+		WHERE id_pesquisa = $1
+		AND data_criacao >= $5
+		AND (
+			(CASE WHEN ip_hash = $2 THEN 1 ELSE 0 END) +
+			(CASE WHEN $3 <> '' AND user_agent_hash = $3 THEN 1 ELSE 0 END) +
+			(CASE WHEN $4 <> '' AND accept_language_hash = $4 THEN 1 ELSE 0 END)
+		) >= 2
+	`
+
+	var count int
+	err := r.db.QueryRowContext(ctx, query, pesquisaID, ipHash, userAgentHash, acceptLanguageHash, since).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("erro ao contar submissões por sinais: %w", err)
+	}
+
+	return count, nil
+}
+
 // DeleteExpired remove submissões expiradas
 // Job cron executa periodicamente para limpeza
 func (r *SubmissaoPesquisaRepository) DeleteExpired(ctx context.Context) (int, error) {
@@ -261,6 +307,9 @@ func (r *SubmissaoPesquisaRepository) ListByPesquisa(ctx context.Context, pesqui
 			token_acesso,
 			ip_hash,
 			fingerprint_hash,
+			user_agent_hash,
+			accept_language_hash,
+			fingerprint_composto,
 			status,
 			data_criacao,
 			data_expiracao,
@@ -288,6 +337,9 @@ func (r *SubmissaoPesquisaRepository) ListByPesquisa(ctx context.Context, pesqui
 			&submissao.TokenAcesso,
 			&submissao.IPHash,
 			&submissao.FingerprintHash,
+			&submissao.UserAgentHash,
+			&submissao.AcceptLangHash,
+			&submissao.FingerprintComp,
 			&submissao.Status,
 			&submissao.DataCriacao,
 			&submissao.DataExpiracao,
@@ -329,6 +381,36 @@ func (r *SubmissaoPesquisaRepository) CountCompleteByPesquisa(ctx context.Contex
 	}
 
 	return count, nil
+}
+
+// AnonymizePersonalData remove dados pessoais rastreáveis de uma submissão.
+func (r *SubmissaoPesquisaRepository) AnonymizePersonalData(ctx context.Context, id int, anonymizedToken string) error {
+	query := `
+		UPDATE submissao_pesquisa
+		SET
+			token_acesso = $2,
+			ip_hash = NULL,
+			fingerprint_hash = NULL,
+			user_agent_hash = NULL,
+			accept_language_hash = NULL,
+			fingerprint_composto = NULL
+		WHERE id_submissao = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, id, anonymizedToken)
+	if err != nil {
+		return fmt.Errorf("erro ao anonimizar submissão: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("erro ao verificar linhas afetadas: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("submissão não encontrada")
+	}
+
+	return nil
 }
 
 // HashIP gera hash SHA256 de um IP com salt

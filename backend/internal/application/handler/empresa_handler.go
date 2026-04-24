@@ -36,6 +36,18 @@ func NewEmpresaHandler(empresaUseCase *usecase.EmpresaUseCase, log logger.Logger
 }
 
 // CreateEmpresa cria nova empresa no sistema
+// @Summary Criar empresa
+// @Description Cria uma nova empresa no sistema.
+// @Tags empresas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.EmpresaCreateRequest true "Dados da empresa"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas [post]
 func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 	var req dto.EmpresaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -77,6 +89,16 @@ func (h *EmpresaHandler) CreateEmpresa(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetEmpresa busca empresa por ID
+// @Summary Buscar empresa por ID
+// @Tags empresas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da empresa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{id} [get]
 func (h *EmpresaHandler) GetEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -99,33 +121,56 @@ func (h *EmpresaHandler) GetEmpresa(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListEmpresas lista todas as empresas com paginação
+// @Summary Listar empresas
+// @Description Lista empresas com suporte a limit e offset.
+// @Tags empresas
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Limite de itens" default(20)
+// @Param offset query int false "Deslocamento" default(0)
+// @Success 200 {object} response.PaginatedResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas [get]
 func (h *EmpresaHandler) ListEmpresas(w http.ResponseWriter, r *http.Request) {
-    limit, offset := h.getPaginationParams(r)
+	limit, offset := h.getPaginationParams(r)
 
-    empresas, err := h.empresaUseCase.List(r.Context(), limit, offset)
-    if err != nil {
-        response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
-        return
-    }
+	empresas, err := h.empresaUseCase.List(r.Context(), limit, offset)
+	if err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
+		return
+	}
 
-    // Converter entidades para DTOs de resposta
-    empresasResponse := make([]interface{}, len(empresas))
-    for i, empresa := range empresas {
-        empresasResponse[i] = response.ToEmpresaResponse(empresa)
-    }
+	// Converter entidades para DTOs de resposta
+	empresasResponse := make([]interface{}, len(empresas))
+	for i, empresa := range empresas {
+		empresasResponse[i] = response.ToEmpresaResponse(empresa)
+	}
 
-    // Calcular metadados de paginação
-    pagination := response.PaginationInfo{
-        Page:       (offset / limit) + 1,
-        Limit:      limit,
-        Total:      len(empresasResponse),
-        TotalPages: (len(empresasResponse) + limit - 1) / limit,
-    }
+	// Calcular metadados de paginação
+	pagination := response.PaginationInfo{
+		Page:       (offset / limit) + 1,
+		Limit:      limit,
+		Total:      len(empresasResponse),
+		TotalPages: (len(empresasResponse) + limit - 1) / limit,
+	}
 
-    response.WritePaginated(w, http.StatusOK, "Empresas listadas com sucesso", empresasResponse, pagination)
+	response.WritePaginated(w, http.StatusOK, "Empresas listadas com sucesso", empresasResponse, pagination)
 }
 
 // UpdateEmpresa atualiza dados de empresa existente
+// @Summary Atualizar empresa
+// @Tags empresas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da empresa"
+// @Param body body dto.EmpresaUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{id} [put]
 func (h *EmpresaHandler) UpdateEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -170,6 +215,17 @@ func (h *EmpresaHandler) UpdateEmpresa(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteEmpresa remove empresa do sistema
+// @Summary Remover empresa
+// @Tags empresas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da empresa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{id} [delete]
 func (h *EmpresaHandler) DeleteEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -198,10 +254,20 @@ func (h *EmpresaHandler) DeleteEmpresa(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetEmpresaByCNPJ busca empresa por CNPJ
+// @Summary Buscar empresa por CNPJ
+// @Tags empresas
+// @Produce json
+// @Security BearerAuth
+// @Param cnpj path string true "CNPJ"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/cnpj/{cnpj} [get]
 func (h *EmpresaHandler) GetEmpresaByCNPJ(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	cnpj := vars["cnpj"]
-	
+
 	// ADICIONAR: Decodificar URL
 	cnpj, err := url.QueryUnescape(cnpj)
 	if err != nil {

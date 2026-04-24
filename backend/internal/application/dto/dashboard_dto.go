@@ -13,16 +13,16 @@ import (
 // DashboardCreateRequest representa os dados necessários para criar um novo dashboard
 // vinculado a uma pesquisa existente.
 type DashboardCreateRequest struct {
-	IDPesquisa    int     `json:"id_pesquisa" binding:"required"`             // Identificador da pesquisa associada (obrigatório)
-	Titulo        string  `json:"titulo" binding:"required,min=3,max=255"`    // Título do dashboard (obrigatório)
-	ConfigFiltros *string `json:"config_filtros,omitempty"`                   // Configuração JSON de filtros (opcional)
+	IDPesquisa    int     `json:"id_pesquisa" binding:"required" example:"10"`                          // Identificador da pesquisa associada (obrigatório)
+	Titulo        string  `json:"titulo" binding:"required,min=3,max=255" example:"Dashboard Clima RH"` // Título do dashboard (obrigatório)
+	ConfigFiltros *string `json:"config_filtros,omitempty" example:"{\"setor\":\"RH\"}"`                // Configuração JSON de filtros (opcional)
 }
 
 // DashboardUpdateRequest define os campos opcionais disponíveis para
 // atualização de um dashboard existente.
 type DashboardUpdateRequest struct {
-	Titulo        *string `json:"titulo,omitempty" binding:"omitempty,min=3,max=255"` // Novo título (opcional)
-	ConfigFiltros *string `json:"config_filtros,omitempty"`                           // Nova configuração de filtros (opcional)
+	Titulo        *string `json:"titulo,omitempty" binding:"omitempty,min=3,max=255" example:"Dashboard Executivo"` // Novo título (opcional)
+	ConfigFiltros *string `json:"config_filtros,omitempty" example:"{\"periodo\":\"2026-Q1\"}"`                     // Nova configuração de filtros (opcional)
 }
 
 // ToEntity converte o DTO de criação em uma instância de entidade Dashboard,

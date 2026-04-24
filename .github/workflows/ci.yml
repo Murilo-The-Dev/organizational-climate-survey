@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/**"
+      - "docker-compose.yml"
+      - "docker-compose.dev.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/**"
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: clima_organizacional_test
+          POSTGRES_USER: clima_user
+          POSTGRES_PASSWORD: clima_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U clima_user -d clima_organizacional_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Download dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: Verify dependencies
+        working-directory: backend
+        run: go mod verify
+
+      - name: Run go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: clima_user
+          DB_PASS: clima_password
+          DB_NAME: clima_organizacional_test
+          DB_SSLMODE: disable
+          JWT_SECRET: ci_test_jwt_secret_not_for_production
+          APP_PORT: 8080
+          APP_ENV: test
+          FRONTEND_URL: http://localhost:3000
+          HASH_SALT: ci_hash_salt
+        run: go test ./... -count=1 -race -timeout=120s
+
+      - name: Run tests with coverage
+        working-directory: backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: clima_user
+          DB_PASS: clima_password
+          DB_NAME: clima_organizacional_test
+          DB_SSLMODE: disable
+          JWT_SECRET: ci_test_jwt_secret_not_for_production
+          APP_PORT: 8080
+          APP_ENV: test
+          FRONTEND_URL: http://localhost:3000
+          HASH_SALT: ci_hash_salt
+        run: |
+          go test ./... -coverprofile=coverage.out -covermode=atomic
+          go tool cover -func=coverage.out | grep "total:"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/coverage.out
+          retention-days: 7
+
+      - name: Check usecase coverage threshold
+        working-directory: backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: clima_user
+          DB_PASS: clima_password
+          DB_NAME: clima_organizacional_test
+          DB_SSLMODE: disable
+          JWT_SECRET: ci_test_jwt_secret_not_for_production
+          APP_PORT: 8080
+          APP_ENV: test
+          FRONTEND_URL: http://localhost:3000
+          HASH_SALT: ci_hash_salt
+        run: |
+          go test ./internal/domain/usecase/... -coverprofile=uc_coverage.out -covermode=atomic
+          COVERAGE=$(go tool cover -func=uc_coverage.out | awk '/total:/ {gsub("%","",$3); print $3}')
+          echo "Usecase coverage: ${COVERAGE}%"
+          if awk "BEGIN {exit !(${COVERAGE} < 60.0)}"; then
+            echo "FAIL: Usecase coverage ${COVERAGE}% is below 60% threshold"
+            exit 1
+          fi
+          echo "PASS: Usecase coverage ${COVERAGE}% meets threshold"
+
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: clima-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

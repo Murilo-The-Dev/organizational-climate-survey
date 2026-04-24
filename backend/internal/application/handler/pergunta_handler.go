@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
@@ -24,6 +24,16 @@ type PerguntaHandler struct {
 	log             logger.Logger
 }
 
+// PerguntaOrdemUpdateRequest define payload para atualização da ordem de uma pergunta.
+type PerguntaOrdemUpdateRequest struct {
+	NovaOrdem int `json:"nova_ordem" example:"2"`
+}
+
+// PerguntaReorderRequest define payload para reordenação em lote das perguntas de uma pesquisa.
+type PerguntaReorderRequest struct {
+	PerguntaIDs []int `json:"pergunta_ids" example:"12,13,14"`
+}
+
 // NewPerguntaHandler cria nova instância do handler de perguntas
 func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase, log logger.Logger) *PerguntaHandler {
 	return &PerguntaHandler{
@@ -33,6 +43,16 @@ func NewPerguntaHandler(perguntaUseCase *usecase.PerguntaUseCase, log logger.Log
 }
 
 // CreatePergunta cria nova pergunta no sistema
+// @Summary Criar pergunta
+// @Tags perguntas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.PerguntaCreateRequest true "Dados da pergunta"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas [post]
 func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request) {
 	var req dto.PerguntaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -67,9 +87,19 @@ func (h *PerguntaHandler) CreatePergunta(w http.ResponseWriter, r *http.Request)
 }
 
 // CreatePerguntasBatch cria múltiplas perguntas em uma única operação
+// @Summary Criar perguntas em lote
+// @Tags perguntas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body []dto.PerguntaCreateRequest true "Lista de perguntas"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas/batch [post]
 func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []dto.PerguntaCreateRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -119,6 +149,16 @@ func (h *PerguntaHandler) CreatePerguntasBatch(w http.ResponseWriter, r *http.Re
 }
 
 // GetPergunta busca pergunta por ID
+// @Summary Buscar pergunta por ID
+// @Tags perguntas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pergunta"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas/{id} [get]
 func (h *PerguntaHandler) GetPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -149,6 +189,15 @@ func (h *PerguntaHandler) GetPergunta(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListPerguntasByPesquisa lista perguntas de pesquisa ordenadas por exibição
+// @Summary Listar perguntas por pesquisa
+// @Tags perguntas
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/perguntas [get]
 func (h *PerguntaHandler) ListPerguntasByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -179,6 +228,18 @@ func (h *PerguntaHandler) ListPerguntasByPesquisa(w http.ResponseWriter, r *http
 }
 
 // UpdatePergunta atualiza dados de pergunta existente
+// @Summary Atualizar pergunta
+// @Tags perguntas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pergunta"
+// @Param body body dto.PerguntaUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas/{id} [put]
 func (h *PerguntaHandler) UpdatePergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -227,6 +288,18 @@ func (h *PerguntaHandler) UpdatePergunta(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateOrdemPergunta atualiza ordem de exibição de pergunta específica
+// @Summary Atualizar ordem de exibição da pergunta
+// @Tags perguntas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pergunta"
+// @Param body body PerguntaOrdemUpdateRequest true "Nova ordem"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas/{id}/ordem [put]
 func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -235,9 +308,7 @@ func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var req struct {
-		NovaOrdem int `json:"nova_ordem"`
-	}
+	var req PerguntaOrdemUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -265,6 +336,17 @@ func (h *PerguntaHandler) UpdateOrdemPergunta(w http.ResponseWriter, r *http.Req
 }
 
 // DeletePergunta remove pergunta do sistema
+// @Summary Remover pergunta
+// @Tags perguntas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pergunta"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/perguntas/{id} [delete]
 func (h *PerguntaHandler) DeletePergunta(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -293,6 +375,17 @@ func (h *PerguntaHandler) DeletePergunta(w http.ResponseWriter, r *http.Request)
 }
 
 // ReorderPerguntas reordena todas as perguntas de uma pesquisa
+// @Summary Reordenar perguntas da pesquisa
+// @Tags perguntas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Param body body PerguntaReorderRequest true "IDs de perguntas na ordem desejada"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/perguntas/reorder [put]
 func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -301,9 +394,7 @@ func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req struct {
-		PerguntaIDs []int `json:"pergunta_ids"`
-	}
+	var req PerguntaReorderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -327,6 +418,15 @@ func (h *PerguntaHandler) ReorderPerguntas(w http.ResponseWriter, r *http.Reques
 }
 
 // GetPerguntasWithStats lista perguntas de pesquisa com estatísticas de respostas
+// @Summary Listar perguntas com estatísticas
+// @Tags perguntas
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/perguntas/with-stats [get]
 func (h *PerguntaHandler) GetPerguntasWithStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])

@@ -1,0 +1,3345 @@
+basePath: /
+definitions:
+  internal_application_handler.PasswordUpdateRequest:
+    properties:
+      nova_senha:
+        description: Nova senha a ser definida
+        example: NovaSenha@123
+        type: string
+    type: object
+  internal_application_handler.PerguntaOrdemUpdateRequest:
+    properties:
+      nova_ordem:
+        example: 2
+        type: integer
+    type: object
+  internal_application_handler.PerguntaReorderRequest:
+    properties:
+      pergunta_ids:
+        example:
+        - 12
+        - 13
+        - 14
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_application_handler.PesquisaStatusUpdateRequest:
+    properties:
+      status:
+        example: Ativa
+        type: string
+    type: object
+  internal_application_handler.StatusUpdateRequest:
+    properties:
+      status:
+        description: Novo status do usuário
+        example: Ativo
+        type: string
+    type: object
+  internal_infrastructure_auth.ChangePasswordRequest:
+    properties:
+      nova_senha:
+        description: Nova senha
+        example: NovaSenha@123
+        maxLength: 128
+        minLength: 8
+        type: string
+      senha_atual:
+        description: Senha atual
+        example: SenhaAtual@123
+        type: string
+    required:
+    - nova_senha
+    - senha_atual
+    type: object
+  internal_infrastructure_auth.ForgotPasswordRequest:
+    properties:
+      email:
+        description: Email para recuperação
+        example: admin@empresa.com
+        type: string
+    required:
+    - email
+    type: object
+  internal_infrastructure_auth.LoginRequest:
+    properties:
+      email:
+        description: Email do usuário
+        example: admin@empresa.com
+        type: string
+      senha:
+        description: Senha em texto plano
+        example: SenhaForte@123
+        type: string
+    required:
+    - email
+    - senha
+    type: object
+  internal_infrastructure_auth.RefreshTokenRequest:
+    properties:
+      token:
+        description: Token JWT atual
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - token
+    type: object
+  internal_infrastructure_auth.ValidateTokenRequest:
+    properties:
+      token:
+        description: Token JWT a ser validado
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - token
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.BootstrapRequest:
+    properties:
+      cnpj:
+        example: 12.345.678/0001-90
+        type: string
+      email:
+        example: admin@techcorp.com
+        type: string
+      nome_admin:
+        description: Dados do administrador
+        example: Maria Souza
+        type: string
+      nome_fantasia:
+        description: Dados da empresa
+        example: Tech Corp
+        type: string
+      razao_social:
+        example: Tech Corp LTDA
+        type: string
+      senha:
+        example: SenhaForte@123
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.DashboardCreateRequest:
+    properties:
+      config_filtros:
+        description: Configuração JSON de filtros (opcional)
+        example: '{"setor":"RH"}'
+        type: string
+      id_pesquisa:
+        description: Identificador da pesquisa associada (obrigatório)
+        example: 10
+        type: integer
+      titulo:
+        description: Título do dashboard (obrigatório)
+        example: Dashboard Clima RH
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - id_pesquisa
+    - titulo
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.DashboardUpdateRequest:
+    properties:
+      config_filtros:
+        description: Nova configuração de filtros (opcional)
+        example: '{"periodo":"2026-Q1"}'
+        type: string
+      titulo:
+        description: Novo título (opcional)
+        example: Dashboard Executivo
+        maxLength: 255
+        minLength: 3
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.EmpresaCreateRequest:
+    properties:
+      cnpj:
+        description: CNPJ formatado (obrigatório e com validação de tamanho)
+        example: 12.345.678/0001-90
+        type: string
+      nome_fantasia:
+        description: Nome comercial da empresa (obrigatório)
+        example: Acme
+        maxLength: 255
+        minLength: 2
+        type: string
+      razao_social:
+        description: Razão social registrada (obrigatória)
+        example: Acme Industria LTDA
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - cnpj
+    - nome_fantasia
+    - razao_social
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.EmpresaUpdateRequest:
+    properties:
+      nome_fantasia:
+        description: Novo nome fantasia (opcional)
+        example: Acme Brasil
+        maxLength: 255
+        minLength: 2
+        type: string
+      razao_social:
+        description: Nova razão social (opcional)
+        example: Acme Brasil LTDA
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.GenerateTokenRequest:
+    properties:
+      fingerprint:
+        description: Fingerprint do browser (opcional)
+        example: f1a2b3c4d5
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.LogAuditoriaCreateRequest:
+    properties:
+      acao_realizada:
+        description: Descrição resumida da ação executada
+        example: Criacao de pesquisa
+        maxLength: 255
+        minLength: 3
+        type: string
+      detalhes:
+        description: Detalhamento adicional da ação (opcional)
+        example: Pesquisa trimestral criada com sucesso
+        maxLength: 1000
+        type: string
+      endereco_ip:
+        description: Endereço IP de origem (opcional e validado)
+        example: 192.168.1.10
+        type: string
+      id_user_admin:
+        description: Identificador do administrador responsável pela ação
+        example: 1
+        type: integer
+    required:
+    - acao_realizada
+    - id_user_admin
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.PerguntaCreateRequest:
+    properties:
+      id_pesquisa:
+        description: Identificador da pesquisa associada (obrigatório)
+        example: 10
+        type: integer
+      opcoes_resposta:
+        description: Opções disponíveis para múltipla escolha ou escala (opcional)
+        example: 1,2,3,4,5
+        type: string
+      ordem_exibicao:
+        description: Posição de exibição da pergunta (obrigatório)
+        example: 1
+        minimum: 1
+        type: integer
+      texto_pergunta:
+        description: Enunciado da pergunta (obrigatório)
+        example: Como você avalia a comunicação interna?
+        maxLength: 500
+        minLength: 5
+        type: string
+      tipo_pergunta:
+        description: Tipo da pergunta, restringido a opções válidas
+        enum:
+        - MultiplaEscolha
+        - RespostaAberta
+        - EscalaNumerica
+        - SimNao
+        example: EscalaNumerica
+        type: string
+    required:
+    - id_pesquisa
+    - ordem_exibicao
+    - texto_pergunta
+    - tipo_pergunta
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.PerguntaUpdateRequest:
+    properties:
+      opcoes_resposta:
+        description: Novas opções de resposta (opcional)
+        example: Sim,Nao
+        type: string
+      ordem_exibicao:
+        description: Nova ordem de exibição (opcional)
+        example: 2
+        minimum: 1
+        type: integer
+      texto_pergunta:
+        description: Novo texto da pergunta (opcional)
+        example: Você se sente reconhecido pelo trabalho?
+        maxLength: 500
+        minLength: 5
+        type: string
+      tipo_pergunta:
+        description: Novo tipo da pergunta (opcional)
+        enum:
+        - MultiplaEscolha
+        - RespostaAberta
+        - EscalaNumerica
+        - SimNao
+        example: SimNao
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.PesquisaCreateRequest:
+    properties:
+      anonimato:
+        description: Indica se as respostas são anônimas
+        example: true
+        type: boolean
+      config_recorrencia:
+        description: Definição de recorrência automática (opcional)
+        example: mensal
+        type: string
+      data_abertura:
+        description: Data de início no formato RFC3339 (opcional)
+        example: "2026-01-10T09:00:00Z"
+        type: string
+      data_fechamento:
+        description: Data de término no formato RFC3339 (opcional)
+        example: "2026-01-31T23:59:59Z"
+        type: string
+      descricao:
+        description: Descrição detalhada (opcional)
+        example: Avaliação anual de clima organizacional
+        maxLength: 1000
+        type: string
+      id_empresa:
+        description: Identificador da empresa (obrigatório)
+        example: 1
+        type: integer
+      id_setor:
+        description: Identificador do setor vinculado (obrigatório)
+        example: 2
+        type: integer
+      id_user_admin:
+        description: Identificador do usuário administrador criador (obrigatório)
+        example: 1
+        type: integer
+      status:
+        description: Estado da pesquisa
+        enum:
+        - Rascunho
+        - Ativa
+        - Concluída
+        - Arquivada
+        example: Ativa
+        type: string
+      titulo:
+        description: Título da pesquisa (obrigatório)
+        example: Pesquisa de Clima 2026
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - id_empresa
+    - id_setor
+    - id_user_admin
+    - status
+    - titulo
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.PesquisaUpdateRequest:
+    properties:
+      config_recorrencia:
+        description: Atualização da configuração de recorrência (opcional)
+        example: semanal
+        type: string
+      data_abertura:
+        description: Nova data de abertura no formato RFC3339 (opcional)
+        example: "2026-02-01T09:00:00Z"
+        type: string
+      data_fechamento:
+        description: Nova data de fechamento no formato RFC3339 (opcional)
+        example: "2026-02-07T23:59:59Z"
+        type: string
+      descricao:
+        description: Nova descrição (opcional)
+        example: Levantamento rápido de bem-estar
+        maxLength: 1000
+        type: string
+      status:
+        description: Novo status (opcional)
+        enum:
+        - Rascunho
+        - Ativa
+        - Concluída
+        - Arquivada
+        example: Concluída
+        type: string
+      titulo:
+        description: Novo título (opcional)
+        example: Pulso Semanal
+        maxLength: 255
+        minLength: 3
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.RespostaCreateRequest:
+    properties:
+      id_pergunta:
+        description: Identificador da pergunta respondida
+        example: 15
+        type: integer
+      valor_resposta:
+        description: Conteúdo textual ou valor da resposta
+        example: "5"
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.RetentionRequest:
+    properties:
+      retention_days:
+        description: Quantidade de dias de retenção (mínimo 30, máximo 2555)
+        example: 90
+        maximum: 2555
+        minimum: 30
+        type: integer
+    required:
+    - retention_days
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.SetorCreateRequest:
+    properties:
+      descricao:
+        description: Descrição opcional, com limite de tamanho
+        example: Setor responsável por gestão de pessoas
+        maxLength: 500
+        type: string
+      id_empresa:
+        description: Identificador da empresa associada
+        example: 1
+        type: integer
+      nome_setor:
+        description: Nome do setor (obrigatório e limitado)
+        example: Recursos Humanos
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - id_empresa
+    - nome_setor
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.SetorUpdateRequest:
+    properties:
+      descricao:
+        description: Nova descrição (opcional)
+        example: Área estratégica de gestão de talentos
+        maxLength: 500
+        type: string
+      nome_setor:
+        description: Novo nome do setor (opcional)
+        example: People Ops
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.SubmitRespostasRequest:
+    properties:
+      respostas:
+        description: Lista de respostas da pesquisa
+        items:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.RespostaCreateRequest'
+        type: array
+      token_acesso:
+        description: Token obtido via GenerateToken
+        example: tok_abc123def456
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.UsuarioAdministradorCreateRequest:
+    properties:
+      email:
+        description: E-mail válido do administrador
+        example: joao@empresa.com
+        maxLength: 255
+        type: string
+      id_empresa:
+        description: Identificador da empresa associada
+        example: 1
+        type: integer
+      nome_admin:
+        description: Nome completo do administrador
+        example: Joao Silva
+        maxLength: 255
+        minLength: 2
+        type: string
+      senha:
+        description: Senha em texto plano (antes do hash)
+        example: SenhaForte@123
+        maxLength: 128
+        minLength: 8
+        type: string
+      status:
+        description: Estado atual do usuário no sistema
+        enum:
+        - Ativo
+        - Inativo
+        - Pendente
+        example: Ativo
+        type: string
+    required:
+    - email
+    - id_empresa
+    - nome_admin
+    - senha
+    - status
+    type: object
+  organizational-climate-survey_backend_internal_application_dto.UsuarioAdministradorUpdateRequest:
+    properties:
+      email:
+        description: Novo e-mail (opcional)
+        example: maria@empresa.com
+        maxLength: 255
+        type: string
+      nome_admin:
+        description: Novo nome do administrador (opcional)
+        example: Maria Oliveira
+        maxLength: 255
+        minLength: 2
+        type: string
+      status:
+        description: Novo status (opcional)
+        enum:
+        - Ativo
+        - Inativo
+        - Pendente
+        example: Inativo
+        type: string
+    type: object
+  organizational-climate-survey_backend_internal_application_dto_response.APIResponse:
+    properties:
+      code:
+        description: Codigo de erro para consumo de clientes
+        example: BAD_REQUEST
+        type: string
+      data:
+        description: Dados retornados, genéricos
+      error:
+        description: Mensagem de erro, se houver
+        example: Parâmetro inválido
+        type: string
+      message:
+        description: Mensagem opcional para o usuário
+        example: Operação realizada com sucesso
+        type: string
+      success:
+        description: Indica se a operação foi bem-sucedida
+        example: true
+        type: boolean
+    type: object
+  organizational-climate-survey_backend_internal_application_dto_response.PaginatedResponse:
+    properties:
+      code:
+        example: ""
+        type: string
+      data: {}
+      error:
+        example: ""
+        type: string
+      message:
+        example: Consulta realizada com sucesso
+        type: string
+      pagination:
+        allOf:
+        - $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.PaginationInfo'
+        description: Informações de paginação
+      success:
+        example: true
+        type: boolean
+    type: object
+  organizational-climate-survey_backend_internal_application_dto_response.PaginationInfo:
+    properties:
+      limit:
+        description: Itens por página
+        example: 20
+        type: integer
+      page:
+        description: Página atual
+        example: 1
+        type: integer
+      total:
+        description: Total de itens
+        example: 120
+        type: integer
+      total_pages:
+        description: Total de páginas
+        example: 6
+        type: integer
+    type: object
+info:
+  contact:
+    email: backend@example.com
+    name: Equipe Backend
+  description: |
+    API REST para gestão de empresas, pesquisas, dashboards, auditoria e submissões anônimas.
+
+    Fluxo sugerido para clientes frontend:
+    1) Autenticar em /auth/login
+    2) Enviar token JWT no header Authorization: Bearer <token>
+    3) Consumir endpoints protegidos em /api/v1
+  license:
+    name: Proprietary
+  termsOfService: https://example.com/terms
+  title: API de Pesquisa de Clima Organizacional
+  version: "1.0"
+paths:
+  /api/v1/auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Valida a senha atual e altera para a nova senha informada.
+      parameters:
+      - description: Senha atual e nova senha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infrastructure_auth.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Alterar senha do usuário autenticado
+      tags:
+      - auth
+  /api/v1/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Inicia o fluxo de recuperação de senha para o email informado.
+      parameters:
+      - description: Email para recuperação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infrastructure_auth.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Solicitar recuperação de senha
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Realiza login com email e senha e retorna token JWT para uso nos
+        endpoints protegidos.
+      parameters:
+      - description: Credenciais de acesso
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infrastructure_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Autenticar administrador
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      description: Registra logout do usuário autenticado.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Encerrar sessão
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Valida o token atual e emite um novo token JWT.
+      parameters:
+      - description: Token atual
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infrastructure_auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Renovar token JWT
+      tags:
+      - auth
+  /api/v1/auth/validate:
+    post:
+      consumes:
+      - application/json
+      description: Valida um token JWT informado e retorna dados básicos do usuário
+        associado.
+      parameters:
+      - description: Token para validação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infrastructure_auth.ValidateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Validar token JWT
+      tags:
+      - auth
+  /api/v1/bootstrap:
+    post:
+      consumes:
+      - application/json
+      description: Cria empresa e primeiro administrador. Endpoint de bootstrap para
+        configuração inicial.
+      parameters:
+      - description: Dados de bootstrap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.BootstrapRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Inicializar sistema
+      tags:
+      - bootstrap
+  /api/v1/dashboards:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do dashboard
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.DashboardCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar dashboard
+      tags:
+      - dashboards
+  /api/v1/dashboards/{id}:
+    delete:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover dashboard
+      tags:
+      - dashboards
+    get:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar dashboard por ID
+      tags:
+      - dashboards
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.DashboardUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar dashboard
+      tags:
+      - dashboards
+  /api/v1/dashboards/{id}/data:
+    get:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Filtros serializados
+        in: query
+        name: filters
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter dados processados do dashboard
+      tags:
+      - dashboards
+  /api/v1/dashboards/{id}/export:
+    get:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: pdf
+        description: Formato do arquivo
+        enum:
+        - pdf
+        - xlsx
+        - csv
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/pdf
+      - text/csv
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Exportar dashboard
+      tags:
+      - dashboards
+  /api/v1/dashboards/{id}/metrics:
+    get:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter métricas resumidas do dashboard
+      tags:
+      - dashboards
+  /api/v1/dashboards/{id}/refresh:
+    post:
+      parameters:
+      - description: ID do dashboard
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar dados do dashboard
+      tags:
+      - dashboards
+  /api/v1/empresas:
+    get:
+      description: Lista empresas com suporte a limit e offset.
+      parameters:
+      - default: 20
+        description: Limite de itens
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Deslocamento
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.PaginatedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar empresas
+      tags:
+      - empresas
+    post:
+      consumes:
+      - application/json
+      description: Cria uma nova empresa no sistema.
+      parameters:
+      - description: Dados da empresa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.EmpresaCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar empresa
+      tags:
+      - empresas
+  /api/v1/empresas/{empresa_id}/dashboards:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: ID do setor para filtro
+        in: query
+        name: setor_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar dashboards por empresa
+      tags:
+      - dashboards
+  /api/v1/empresas/{empresa_id}/logs-auditoria:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - default: 10
+        description: Limite
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar logs por empresa
+      tags:
+      - logs-auditoria
+  /api/v1/empresas/{empresa_id}/logs-auditoria/by-action:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Ação
+        in: query
+        name: acao
+        required: true
+        type: string
+      - default: 10
+        description: Limite
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar logs por ação
+      tags:
+      - logs-auditoria
+  /api/v1/empresas/{empresa_id}/logs-auditoria/by-date:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Data inicial (RFC3339)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final (RFC3339)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar logs por período
+      tags:
+      - logs-auditoria
+  /api/v1/empresas/{empresa_id}/logs-auditoria/export:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Data inicial (RFC3339)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final (RFC3339)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - default: csv
+        description: Formato
+        enum:
+        - csv
+        - excel
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Exportar logs de auditoria
+      tags:
+      - logs-auditoria
+  /api/v1/empresas/{empresa_id}/logs-auditoria/summary:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Data inicial (RFC3339)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final (RFC3339)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter resumo de auditoria
+      tags:
+      - logs-auditoria
+  /api/v1/empresas/{empresa_id}/pesquisas:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Status da pesquisa
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar pesquisas por empresa
+      tags:
+      - pesquisas
+  /api/v1/empresas/{empresa_id}/pesquisas/active:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar pesquisas ativas por empresa
+      tags:
+      - pesquisas
+  /api/v1/empresas/{empresa_id}/setores:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar setores por empresa
+      tags:
+      - setores
+  /api/v1/empresas/{empresa_id}/setores/nome/{nome}:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Nome do setor
+        in: path
+        name: nome
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar setor por nome
+      tags:
+      - setores
+  /api/v1/empresas/{empresa_id}/usuarios-administradores:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: empresa_id
+        required: true
+        type: integer
+      - description: Status do usuário
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar usuários administradores por empresa
+      tags:
+      - usuarios-administradores
+  /api/v1/empresas/{id}:
+    delete:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover empresa
+      tags:
+      - empresas
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar empresa por ID
+      tags:
+      - empresas
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.EmpresaUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar empresa
+      tags:
+      - empresas
+  /api/v1/empresas/cnpj/{cnpj}:
+    get:
+      parameters:
+      - description: CNPJ
+        in: path
+        name: cnpj
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar empresa por CNPJ
+      tags:
+      - empresas
+  /api/v1/logs-auditoria:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do log
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.LogAuditoriaCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar log de auditoria
+      tags:
+      - logs-auditoria
+  /api/v1/logs-auditoria/{id}:
+    get:
+      parameters:
+      - description: ID do log
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar log de auditoria por ID
+      tags:
+      - logs-auditoria
+  /api/v1/logs-auditoria/clean:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Configuração de retenção
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.RetentionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Limpar logs antigos
+      tags:
+      - logs-auditoria
+  /api/v1/perguntas:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da pergunta
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.PerguntaCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar pergunta
+      tags:
+      - perguntas
+  /api/v1/perguntas/{id}:
+    delete:
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover pergunta
+      tags:
+      - perguntas
+    get:
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar pergunta por ID
+      tags:
+      - perguntas
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.PerguntaUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar pergunta
+      tags:
+      - perguntas
+  /api/v1/perguntas/{id}/ordem:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Nova ordem
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_application_handler.PerguntaOrdemUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar ordem de exibição da pergunta
+      tags:
+      - perguntas
+  /api/v1/perguntas/{pergunta_id}/respostas/aggregated:
+    get:
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: pergunta_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter respostas agregadas por pergunta
+      tags:
+      - respostas
+  /api/v1/perguntas/{pergunta_id}/respostas/count:
+    get:
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: pergunta_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Contar respostas por pergunta
+      tags:
+      - respostas
+  /api/v1/perguntas/{pergunta_id}/respostas/stats:
+    get:
+      parameters:
+      - description: ID da pergunta
+        in: path
+        name: pergunta_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter estatísticas completas por pergunta
+      tags:
+      - respostas
+  /api/v1/perguntas/batch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Lista de perguntas
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.PerguntaCreateRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar perguntas em lote
+      tags:
+      - perguntas
+  /api/v1/pesquisas:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da pesquisa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.PesquisaCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar pesquisa
+      tags:
+      - pesquisas
+  /api/v1/pesquisas/{id}:
+    delete:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover pesquisa
+      tags:
+      - pesquisas
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar pesquisa por ID
+      tags:
+      - pesquisas
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.PesquisaUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar pesquisa
+      tags:
+      - pesquisas
+  /api/v1/pesquisas/{id}/qrcode:
+    post:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Gerar QR Code da pesquisa
+      tags:
+      - pesquisas
+  /api/v1/pesquisas/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Novo status da pesquisa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_application_handler.PesquisaStatusUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar status da pesquisa
+      tags:
+      - pesquisas
+  /api/v1/pesquisas/{pesquisa_id}/comparativo:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      - description: ID do setor para filtro
+        in: query
+        name: setor_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter comparativo histórico da pesquisa
+      tags:
+      - dashboards
+  /api/v1/pesquisas/{pesquisa_id}/dashboard:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar dashboard por pesquisa
+      tags:
+      - dashboards
+  /api/v1/pesquisas/{pesquisa_id}/export:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      - default: pdf
+        description: Formato do arquivo
+        enum:
+        - pdf
+        - xlsx
+        - csv
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/pdf
+      - text/csv
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Exportar relatório da pesquisa
+      tags:
+      - dashboards
+  /api/v1/pesquisas/{pesquisa_id}/perguntas:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar perguntas por pesquisa
+      tags:
+      - perguntas
+  /api/v1/pesquisas/{pesquisa_id}/perguntas/reorder:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      - description: IDs de perguntas na ordem desejada
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_application_handler.PerguntaReorderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Reordenar perguntas da pesquisa
+      tags:
+      - perguntas
+  /api/v1/pesquisas/{pesquisa_id}/perguntas/with-stats:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar perguntas com estatísticas
+      tags:
+      - perguntas
+  /api/v1/pesquisas/{pesquisa_id}/respostas:
+    delete:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover respostas por pesquisa
+      tags:
+      - respostas
+  /api/v1/pesquisas/{pesquisa_id}/respostas/aggregated:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter respostas agregadas por pesquisa
+      tags:
+      - respostas
+  /api/v1/pesquisas/{pesquisa_id}/respostas/by-date:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      - description: Data inicial (RFC3339)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final (RFC3339)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter respostas por período
+      tags:
+      - respostas
+  /api/v1/pesquisas/{pesquisa_id}/respostas/count:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Contar respostas por pesquisa
+      tags:
+      - respostas
+  /api/v1/pesquisas/{pesquisa_id}/respostas/stats:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter estatísticas de respostas por pesquisa
+      tags:
+      - respostas
+  /api/v1/pesquisas/{pesquisa_id}/submissions/stats:
+    get:
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Obter estatísticas de submissões
+      tags:
+      - submissoes
+  /api/v1/pesquisas/{pesquisa_id}/token:
+    post:
+      consumes:
+      - application/json
+      description: Gera token temporário para submissão anônima de respostas.
+      parameters:
+      - description: ID da pesquisa
+        in: path
+        name: pesquisa_id
+        required: true
+        type: integer
+      - description: Fingerprint opcional
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.GenerateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Gerar token de acesso para pesquisa
+      tags:
+      - submissoes
+  /api/v1/pesquisas/link/{link}:
+    get:
+      parameters:
+      - description: Link de acesso da pesquisa
+        in: path
+        name: link
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar pesquisa por link
+      tags:
+      - pesquisas
+  /api/v1/respostas/submit:
+    post:
+      consumes:
+      - application/json
+      description: Submete respostas de uma pesquisa usando token de acesso gerado
+        previamente.
+      parameters:
+      - description: Token e respostas
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.SubmitRespostasRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Submeter respostas anônimas
+      tags:
+      - respostas
+  /api/v1/setores:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do setor
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.SetorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar setor
+      tags:
+      - setores
+  /api/v1/setores/{id}:
+    delete:
+      parameters:
+      - description: ID do setor
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Remover setor
+      tags:
+      - setores
+    get:
+      parameters:
+      - description: ID do setor
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar setor por ID
+      tags:
+      - setores
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do setor
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.SetorUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar setor
+      tags:
+      - setores
+  /api/v1/setores/{setor_id}/pesquisas:
+    get:
+      parameters:
+      - description: ID do setor
+        in: path
+        name: setor_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar pesquisas por setor
+      tags:
+      - pesquisas
+  /api/v1/submissoes/{submissao_id}/dados-pessoais:
+    delete:
+      description: Remove dados pessoais de rastreio de uma submissão, preservando
+        as respostas para análise (LGPD).
+      parameters:
+      - description: ID da submissão
+        in: path
+        name: submissao_id
+        required: true
+        type: integer
+      - description: Motivo da anonimização
+        in: query
+        name: motivo
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Anonimizar dados pessoais da submissão
+      tags:
+      - respostas
+  /api/v1/usuarios-administradores:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do usuário administrador
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.UsuarioAdministradorCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar usuário administrador
+      tags:
+      - usuarios-administradores
+  /api/v1/usuarios-administradores/{id}:
+    delete:
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Inativar usuário administrador
+      tags:
+      - usuarios-administradores
+    get:
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar usuário administrador por ID
+      tags:
+      - usuarios-administradores
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto.UsuarioAdministradorUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar usuário administrador
+      tags:
+      - usuarios-administradores
+  /api/v1/usuarios-administradores/{id}/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Nova senha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_application_handler.PasswordUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar senha de usuário administrador
+      tags:
+      - usuarios-administradores
+  /api/v1/usuarios-administradores/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Novo status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_application_handler.StatusUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar status de usuário administrador
+      tags:
+      - usuarios-administradores
+  /api/v1/usuarios-administradores/{user_admin_id}/logs-auditoria:
+    get:
+      parameters:
+      - description: ID do usuário administrador
+        in: path
+        name: user_admin_id
+        required: true
+        type: integer
+      - default: 10
+        description: Limite
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar logs por usuário administrador
+      tags:
+      - logs-auditoria
+  /api/v1/usuarios-administradores/email/{email}:
+    get:
+      parameters:
+      - description: Email do usuário administrador
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar usuário administrador por email
+      tags:
+      - usuarios-administradores
+  /health:
+    get:
+      description: Retorna status de disponibilidade e metadados básicos da API.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+      summary: Health check da API
+      tags:
+      - system
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
