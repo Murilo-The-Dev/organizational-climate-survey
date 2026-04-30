@@ -1,14 +1,8 @@
 "use client";
-import React, { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { ListFilter } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -16,76 +10,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {  ListFilter, Filter, ArrowDownToLine } from "lucide-react";
 import {
   ResultsDataTable,
-  allMockResults,
   SurveyResult,
 } from "@/components/dashboard/ResultsDataTable";
 import { ExportReportButton } from "@/components/ui/export-report-button";
+import { pesquisaService } from "@/lib/services/pesquisaService";
+import { dashboardService } from "@/lib/services/dashboardService";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
-import { dadosPesquisas, Pesquisa } from "@/components/dashboard/DataTable";
-
-const departamentos = [
-  "Tecnologia",
-  "Recursos Humanos",
-  "Marketing",
-  "Vendas",
-  "Financeiro",
-];
-
-const ResultadosPage = () => {
+export default function ResultadosPage() {
+  const { user } = useAuth();
+  const [pesquisas, setPesquisas] = useState<any[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("todos");
   const [displayResults, setDisplayResults] = useState<SurveyResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Função centralizada que busca e filtra os dados
-  const applyFilters = (surveyId: string, department: string) => {
+  // 1. Carrega as pesquisas reais da empresa para preencher o Select
+  useEffect(() => {
+    if (user) {
+      const empresaId = (user as any)?.empresaId
+        ? Number((user as any).empresaId)
+        : 1;
+      pesquisaService
+        .listByEmpresa(empresaId)
+        .then(setPesquisas)
+        .catch(console.error);
+    }
+  }, [user]);
+
+  // 2. Busca os dados da pesquisa selecionada direto da API
+  const applyFilters = async (surveyId: string, department: string) => {
     if (!surveyId) {
       setDisplayResults([]);
       return;
     }
 
     setIsLoading(true);
-    // Simula uma chamada de API para buscar os resultados
-    setTimeout(() => {
-      let results = allMockResults[surveyId] || [];
 
-      // Se um departamento específico for selecionado (diferente de "todos"),
-      // simulamos a filtragem alterando os dados para dar um feedback visual.
-      if (department !== "todos") {
-        // Em um cenário real, você faria uma nova busca na API com o filtro
-        // de departamento ou filtraria um conjunto de dados que já contém essa informação.
-        results = results.map((result) => {
-          // Usa o nome do departamento para criar um "hash" simples e previsível
-          // para modificar os dados de forma consistente na simulação.
-          const hash = department
-            .split("")
-            .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    try {
+      const func =
+        dashboardService.getMetrics || (dashboardService as any).getData;
+      const data = await func(Number(surveyId));
+      const metricas = data?.metricas_por_pergunta || [];
 
-          // Modifica a pontuação e o número de respostas de forma simulada
-          const scoreVariation = 1 + ((hash % 10) - 4.5) / 50; // Variação de até ~ +/- 9%
-          const responseCountVariation = 0.2 + ((hash % 10) / 15); // Respostas entre 20% e ~86% do total
-
-          const newScore = result.averageScore * scoreVariation;
-          const newResponseCount = Math.round(
-            result.responseCount * responseCountVariation,
-          );
-
-          return {
-            ...result,
-            averageScore: parseFloat(
-              Math.max(1, Math.min(5, newScore)).toFixed(1),
-            ),
-            responseCount: newResponseCount,
-          };
-        });
-      }
+      // 3. Traduz os dados do backend para o formato que a tabela espera
+      let results = metricas.map((m: any, index: number) => ({
+        id: String(m.id_pergunta || index),
+        question: m.texto_pergunta || "Métrica",
+        category: "Geral" as any,
+        averageScore: m.media ? Number(m.media.toFixed(1)) : 0,
+        responseCount: m.total_respostas || 0,
+      }));
 
       setDisplayResults(results);
+    } catch (error) {
+      console.error("Erro ao buscar resultados:", error);
+      toast.error("Não foi possível carregar os resultados.");
+    } finally {
       setIsLoading(false);
-    }, 300); // Simula um delay de rede
+    }
   };
 
   const handleSurveyChange = (surveyId: string) => {
@@ -95,13 +81,12 @@ const ResultadosPage = () => {
 
   const handleDepartmentChange = (department: string) => {
     setSelectedDepartment(department);
-    // Aplica o filtro apenas se uma pesquisa já estiver selecionada
-    if (selectedSurvey) {
-      applyFilters(selectedSurvey, department);
-    }
+    if (selectedSurvey) applyFilters(selectedSurvey, department);
   };
 
-  const surveyForReport = dadosPesquisas.find((p) => p.id === selectedSurvey);
+  const surveyForReport = pesquisas.find(
+    (p) => String(p.id_pesquisa) === selectedSurvey,
+  );
 
   return (
     <section className="container mx-auto px-4 mt-10">
@@ -114,14 +99,13 @@ const ResultadosPage = () => {
             Filtre e analise as respostas de cada pesquisa em detalhes.
           </p>
         </div>
-        <ExportReportButton surveyId={selectedSurvey} surveyName={surveyForReport?.title ?? "Resultados Detalhados"} />
+        <ExportReportButton surveyId={selectedSurvey} />
       </div>
 
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ListFilter className="h-5 w-5" />
-            Filtros de Análise
+            <ListFilter className="h-5 w-5" /> Filtros de Análise
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -131,13 +115,14 @@ const ResultadosPage = () => {
                 <SelectValue placeholder="Selecione a pesquisa" />
               </SelectTrigger>
               <SelectContent>
-                {dadosPesquisas.map((pesquisa: Pesquisa) => (
-                  <SelectItem key={pesquisa.id} value={pesquisa.id}>
-                    {pesquisa.title}
+                {pesquisas.map((p: any) => (
+                  <SelectItem key={p.id_pesquisa} value={String(p.id_pesquisa)}>
+                    {p.titulo}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
             <Select
               onValueChange={handleDepartmentChange}
               value={selectedDepartment}
@@ -147,11 +132,8 @@ const ResultadosPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os departamentos</SelectItem>
-                {departamentos.map((depto) => (
-                  <SelectItem key={depto} value={depto.toLowerCase()}>
-                    {depto}
-                  </SelectItem>
-                ))}
+                <SelectItem value="ti">Tecnologia</SelectItem>
+                <SelectItem value="rh">Recursos Humanos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -161,6 +143,4 @@ const ResultadosPage = () => {
       <ResultsDataTable data={displayResults} isLoading={isLoading} />
     </section>
   );
-};
-
-export default ResultadosPage;
+}
