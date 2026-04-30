@@ -1,95 +1,128 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowDownToLine } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+  Download,
+  Loader2,
+  FileSpreadsheet,
+  FileText,
+  TableProperties,
+} from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { dadosPesquisas, Pesquisa } from "@/components/dashboard/DataTable";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface ExportReportButtonProps {
   surveyId: string;
 }
 
-export function ExportReportButton({ surveyId: initialSurveyId }: ExportReportButtonProps) {
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedSurvey, setSelectedSurvey] = useState<string>(initialSurveyId || "");
+export function ExportReportButton({ surveyId }: ExportReportButtonProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const { user } = useAuth();
 
-  // Sincroniza o estado interno com a prop quando o modal é aberto ou a prop muda.
-  // Isso garante que a pesquisa selecionada na página principal seja pré-selecionada no modal.
-  React.useEffect(() => {
-    if (isOpen) {
-      setSelectedSurvey(initialSurveyId || "");
+  const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
+    if (!surveyId) {
+      toast.error("Nenhuma pesquisa selecionada para exportação.");
+      return;
     }
-  }, [isOpen, initialSurveyId]);
 
-  const handleExport = () => {
-    // Usa o ID da pesquisa selecionada para construir a URL dinamicamente
-    const surveyId = selectedSurvey || "RESULTADOS_GERAIS"; // Fallback para um valor geral
-    const url = `/relatorios/${surveyId}`;
-    router.push(url);
-    setIsOpen(false); // Fecha o modal após a navegação
+    try {
+      setIsExporting(true);
+      toast.info(`Iniciando download em ${format.toUpperCase()}...`);
+
+      // Alexandre: Estou batendo direto no endpoint com fetch em vez do axios do api.ts
+      // porque lidar com responseType 'blob' no Axios centralizado costuma dar dor de cabeça.
+      const token = (user as any)?.token;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
+
+      const response = await fetch(
+        `${baseUrl}/dashboards/${surveyId}/export?format=${format}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Falha ao exportar relatório: Status ${response.status}`,
+        );
+      }
+
+      // Transforma a resposta binária em um Blob (arquivo)
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Cria um link <a href="..."> invisível na tela para forçar o download no navegador
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-pesquisa-${surveyId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpa a memória
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Download concluído com sucesso!");
+    } catch (error) {
+      console.error("Erro na exportação:", error);
+      toast.error(
+        "Ocorreu um erro ao gerar o arquivo. Verifique com o administrador.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <ArrowDownToLine className="mr-2 h-4 w-4" />
-          Exportar Relatório
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          className="gap-2 border-blue-200 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+          disabled={isExporting || !surveyId}
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {isExporting ? "Gerando Arquivo..." : "Exportar Resultados"}
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Filtros para Relatório de Pesquisa</DialogTitle>
-          <DialogDescription>
-            Selecione a pesquisa para a qual deseja gerar um relatório detalhado.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="pesquisa">Pesquisa</Label>
-            <Select value={selectedSurvey} onValueChange={setSelectedSurvey}>
-              <SelectTrigger id="pesquisa">
-                <SelectValue placeholder="Selecione uma pesquisa" />
-              </SelectTrigger>
-              <SelectContent>
-                {dadosPesquisas.map((pesquisa: Pesquisa) => (
-                  <SelectItem key={pesquisa.id} value={pesquisa.id}>
-                    {pesquisa.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancelar</Button>
-          </DialogClose>
-          <Button onClick={handleExport} disabled={!selectedSurvey}>Exportar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem
+          onClick={() => handleExport("csv")}
+          className="cursor-pointer gap-2 py-3"
+        >
+          <TableProperties className="h-4 w-4 text-green-600" />
+          <span>Exportar como CSV</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleExport("xlsx")}
+          className="cursor-pointer gap-2 py-3"
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+          <span>Exportar como Excel (.xlsx)</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleExport("pdf")}
+          className="cursor-pointer gap-2 py-3"
+        >
+          <FileText className="h-4 w-4 text-red-500" />
+          <span>Exportar como PDF</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -23,13 +23,5 @@ export default function LoginLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    // Adicionado suppressHydrationWarning aqui
-    <html lang="pt-BR" suppressHydrationWarning> 
-      {/* Adicionado suppressHydrationWarning aqui */}
-      <body className="antialiased bg-zinc-50" suppressHydrationWarning>
-        {children}
-      </body>
-    </html>
-  );
+  return <>{children}</>;
 }
