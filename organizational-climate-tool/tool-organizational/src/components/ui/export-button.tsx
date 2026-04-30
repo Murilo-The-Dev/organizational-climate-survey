@@ -1,65 +1,78 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface ExportButtonProps {
-  data: any[];
+  surveyId?: string;
   filename?: string;
-  headers?: string[];
 }
 
-export function ExportButton({ data, filename = "export", headers }: ExportButtonProps) {
-  const convertToCsv = (data: any[], headers?: string[]) => {
-    if (!data || data.length === 0) return "";
+export function ExportButton({
+  surveyId,
+  filename = "dados",
+}: ExportButtonProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const { user } = useAuth();
 
-    const csvRows = [];
-    const actualHeaders = headers || Object.keys(data[0]);
-    csvRows.push(actualHeaders.join(","));
-
-    for (const row of data) {
-      const values = actualHeaders.map(header => {
-        const escaped = ('' + row[header]).replace(/"/g, '""');
-        return `"${escaped}"`;
-      });
-      csvRows.push(values.join(","));
-    }
-    return csvRows.join("\n");
-  };
-
-  const handleExportCsv = () => {
-    if (data.length === 0) {
-      toast.info("Não há dados para exportar.");
+  const handleExportCsv = async () => {
+    if (!surveyId) {
+      toast.info("Selecione uma pesquisa para exportar os dados.");
       return;
     }
-    const csvString = convertToCsv(data, headers);
-    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `${filename}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Dados exportados com sucesso para CSV!");
+
+    try {
+      setIsExporting(true);
+      const token = (user as any)?.token;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1";
+
+      const response = await fetch(
+        `${baseUrl}/dashboards/${surveyId}/export?format=csv`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!response.ok) throw new Error("Falha na API");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Dados exportados com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao exportar dados do servidor.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1">
-          <Download className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Exportar
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleExportCsv}>
-          Exportar para CSV
-        </DropdownMenuItem>
-        {/* Futuras opções de exportação, como PDF, podem ser adicionadas aqui */}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 gap-1"
+      onClick={handleExportCsv}
+      disabled={isExporting || !surveyId}
+    >
+      {isExporting ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Download className="h-3.5 w-3.5" />
+      )}
+      <span className="sr-only sm:not-sr-only">Exportar CSV</span>
+    </Button>
   );
 }
-
