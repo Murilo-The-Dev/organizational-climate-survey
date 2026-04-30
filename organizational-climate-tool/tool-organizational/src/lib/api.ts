@@ -1,6 +1,6 @@
-import axios, { AxiosError } from 'axios';
-import { parseCookies } from 'nookies';
-import { toast } from 'sonner';
+import axios, { AxiosError } from "axios";
+import { parseCookies } from "nookies";
+import { toast } from "sonner";
 
 // Tipo base que espelha a estrutura padrão de resposta da API Go
 export type ApiResponse<T> = {
@@ -11,7 +11,8 @@ export type ApiResponse<T> = {
 };
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1',
+  baseURL:
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1",
 });
 
 // Interceptor de request: injeta o token JWT em todas as requisições
@@ -28,8 +29,8 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
       }
       return Promise.reject(error);
     }
@@ -37,18 +38,21 @@ api.interceptors.response.use(
     const message =
       error.response?.data?.message ||
       error.response?.data?.error ||
-      'Ocorreu um erro inesperado. Tente novamente.';
+      "Ocorreu um erro inesperado. Tente novamente.";
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       toast.error(message);
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // Helpers tipados que unwrapam `data` automaticamente
-export async function apiGet<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+export async function apiGet<T>(
+  url: string,
+  params?: Record<string, unknown>,
+): Promise<T> {
   const response = await api.get<ApiResponse<T>>(url, { params });
   return response.data.data;
 }
@@ -69,4 +73,3 @@ export async function apiDelete<T = void>(url: string): Promise<T> {
 }
 
 export default api;
-

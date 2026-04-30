@@ -1,8 +1,15 @@
-import * as React from "react";
-import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis, YAxis } from "recharts";
-import { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO, format } from "date-fns";
+"use client";
 
+import * as React from "react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { DateRange } from "react-day-picker";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,98 +23,96 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const allChartData = [
-  { date: "2024-01-01", engajamento: 120, satisfacao: 100 },
-  { date: "2024-02-01", engajamento: 150, satisfacao: 130 },
-  { date: "2024-03-01", engajamento: 130, satisfacao: 110 },
-  { date: "2024-04-01", engajamento: 180, satisfacao: 160 },
-  { date: "2024-05-01", engajamento: 200, satisfacao: 180 },
-  { date: "2024-06-01", engajamento: 170, satisfacao: 150 },
-  { date: "2024-07-01", engajamento: 220, satisfacao: 200 },
-  { date: "2024-08-01", engajamento: 250, satisfacao: 230 },
-  { date: "2024-09-01", engajamento: 230, satisfacao: 210 },
-  { date: "2024-10-01", engajamento: 280, satisfacao: 260 },
-  { date: "2024-11-01", engajamento: 300, satisfacao: 280 },
-  { date: "2024-12-01", engajamento: 270, satisfacao: 250 },
-];
+import { dashboardService } from "@/lib/services/dashboardService";
+import { useAuth } from "@/context/AuthContext";
 
 const chartConfig = {
-  engajamento: {
-    label: "Engajamento",
-    color: "hsl(var(--chart-1))",
-  },
-  satisfacao: {
-    label: "Satisfação",
-    color: "hsl(var(--chart-2))",
-  },
+  engajamento: { label: "Média (0-5)", color: "var(--color-blue-600)" },
+  satisfacao: { label: "Total Respostas", color: "var(--color-blue-400)" },
 } satisfies ChartConfig;
 
-interface ChartLineTrendsProps {
-  dateRange?: DateRange;
-}
+export function ChartLineTrends({ dateRange }: { dateRange?: DateRange }) {
+  const { user } = useAuth();
+  const [chartData, setChartData] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-export function ChartLineTrends({ dateRange }: ChartLineTrendsProps) {
-  const filteredChartData = React.useMemo(() => {
-    if (!dateRange?.from) {
-      return allChartData;
+  React.useEffect(() => {
+    if (user) carregarDados();
+  }, [user]);
+
+  const carregarDados = async () => {
+    try {
+      setIsLoading(true);
+      const empresaId = (user as any)?.empresaId
+        ? Number((user as any).empresaId)
+        : 1;
+      const func =
+        dashboardService.getData || (dashboardService as any).getMetrics;
+      const data = await func(empresaId);
+
+      const metricas = data?.metricas_por_pergunta || [];
+      const formatado = metricas.map((m: any, i: number) => ({
+        name: m.texto_pergunta
+          ? m.texto_pergunta.substring(0, 10) + "..."
+          : `Q${i + 1}`,
+        engajamento: m.media ? Number(m.media.toFixed(1)) : 0,
+        satisfacao: m.total_respostas || 0,
+      }));
+
+      setChartData(formatado);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-    const startDate = dateRange.from;
-    const endDate = dateRange.to || new Date();
-
-    return allChartData.filter(item => {
-      const itemDate = parseISO(item.date);
-      return isWithinInterval(itemDate, { start: startDate, end: endDate });
-    });
-  }, [dateRange]);
+  };
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle>Engajamento e Satisfação ao Longo do Tempo</CardTitle>
-        <CardDescription>Métricas mensais de engajamento e satisfação.</CardDescription>
+        <CardTitle>Tendências por Métrica</CardTitle>
+        <CardDescription>
+          Média e volume ao longo do questionário
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig}>
-          <RechartsLineChart
-            accessibilityLayer
-            data={filteredChartData}
-            margin={{
-              left: 12,
-              right: 12,
-            }}
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => format(parseISO(value), "MMM yy")}
-            />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Line
-              dataKey="engajamento"
-              type="monotone"
-              stroke="#2B7FFF"
-              strokeWidth={2}
-              dot={false}
-            />
-            <Line
-              dataKey="satisfacao"
-              type="monotone"
-              stroke="#2B7FFF"
-              strokeWidth={2}
-              dot={false}
-            />
-          </RechartsLineChart>
-        </ChartContainer>
+      <CardContent className="flex-1 min-h-[250px] flex items-center justify-center">
+        {isLoading ? (
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+        ) : (
+          <ChartContainer config={chartConfig} className="w-full h-[250px]">
+            <RechartsLineChart
+              data={chartData}
+              margin={{ left: 12, right: 12 }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Line
+                dataKey="engajamento"
+                type="monotone"
+                stroke="var(--color-blue-600)"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                dataKey="satisfacao"
+                type="monotone"
+                stroke="var(--color-blue-400)"
+                strokeWidth={2}
+                dot={false}
+              />
+            </RechartsLineChart>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );
 }
-

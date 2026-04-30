@@ -1,8 +1,9 @@
-import * as React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from "recharts";
-import { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO } from "date-fns";
+"use client";
 
+import * as React from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { DateRange } from "react-day-picker";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,78 +17,77 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const allChartData = [
-  { category: "Liderança", q1: 60, q2: 75, q3: 70 },
-  { category: "Comunicação", q1: 70, q2: 65, q3: 80 },
-  { category: "Colaboração", q1: 80, q2: 85, q3: 75 },
-  { category: "Reconhecimento", q1: 50, q2: 60, q3: 65 },
-  { category: "Desenvolvimento", q1: 75, q2: 80, q3: 85 },
-];
+import { dashboardService } from "@/lib/services/dashboardService";
+import { useAuth } from "@/context/AuthContext";
 
 const chartConfig = {
-  q1: {
-    label: "Q1",
-    color: "hsl(var(--chart-1))",
-  },
-  q2: {
-    label: "Q2",
-    color: "hsl(var(--chart-2))",
-  },
-  q3: {
-    label: "Q3",
-    color: "hsl(var(--chart-3))",
-  },
+  media: { label: "Média (0-5)", color: "var(--color-blue-600)" },
 } satisfies ChartConfig;
 
-interface ChartBarComparativeProps {
-  dateRange?: DateRange;
-}
+export function ChartBarComparative({ dateRange }: { dateRange?: DateRange }) {
+  const { user } = useAuth();
+  const [chartData, setChartData] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-export function ChartBarComparative({ dateRange }: ChartBarComparativeProps) {
-  // Para este gráfico comparativo, o dateRange pode ser usado para selecionar quais trimestres/períodos comparar
-  // Por simplicidade, vamos manter os dados mockados fixos por enquanto, mas a prop está disponível.
-  console.log("Date range for ChartBarComparative:", dateRange);
+  React.useEffect(() => {
+    if (user) carregarDados();
+  }, [user]);
+
+  const carregarDados = async () => {
+    try {
+      setIsLoading(true);
+      const empresaId = (user as any)?.empresaId
+        ? Number((user as any).empresaId)
+        : 1;
+      const func =
+        dashboardService.getData || (dashboardService as any).getMetrics;
+      const data = await func(empresaId);
+
+      const metricas = data?.metricas_por_pergunta || [];
+      const formatado = metricas.map((m: any, i: number) => ({
+        category: m.texto_pergunta
+          ? m.texto_pergunta.substring(0, 15) + "..."
+          : `Q${i + 1}`,
+        media: m.media ? Number(m.media.toFixed(1)) : 0,
+      }));
+
+      setChartData(formatado);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle>Comparativo de Desempenho por Categoria</CardTitle>
-        <CardDescription>Comparação de métricas chave ao longo de diferentes trimestres.</CardDescription>
+        <CardTitle>Comparativo Geral</CardTitle>
+        <CardDescription>Comparação das médias entre métricas.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart
-            accessibilityLayer
-            data={allChartData}
-            margin={{
-              left: 0,
-              right: 5,
-            }}
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="category"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => `${value}%`}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent valueFormatter={(value) => `${value}%`} />}
-            />
-            <Legend />
-            <Bar dataKey="q1" fill="#2B7FFF" />
-            <Bar dataKey="q2" fill="#5790e5" />
-            <Bar dataKey="q3" fill="#0A4DB2" />
-          </BarChart>
-        </ChartContainer>
+      <CardContent className="flex-1 min-h-[250px] flex items-center justify-center">
+        {isLoading ? (
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+        ) : (
+          <ChartContainer config={chartConfig} className="w-full h-[250px]">
+            <BarChart data={chartData} margin={{ left: 0, right: 5 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="category"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="media"
+                fill="var(--color-blue-600)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );
