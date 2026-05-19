@@ -121,7 +121,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	if respostaHandler != nil && config.PesquisaRepo != nil {
 		surveyRoutes := api.PathPrefix("").Subrouter()
 		surveyRoutes.Use(middleware.SurveySubmissionMiddlewares(config.PesquisaRepo)) // Passa repo
-		surveyRoutes.HandleFunc("/respostas/submit", respostaHandler.SubmitRespostas).Methods("POST")
+		respostaHandler.RegisterPublicRoutes(surveyRoutes)
 	}
 
 	// === ROTAS AUTENTICADAS (requerem JWT) ===
@@ -163,16 +163,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	if respostaHandler != nil {
 		respostaAdminRoutes := api.PathPrefix("").Subrouter()
 		respostaAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
-
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/stats", respostaHandler.GetRespostaStats).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/aggregated", respostaHandler.GetRespostasByPesquisa).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/by-date", respostaHandler.GetRespostasByDateRange).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/count", respostaHandler.CountRespostasByPesquisa).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas", respostaHandler.DeleteRespostasByPesquisa).Methods("DELETE")
-		respostaAdminRoutes.HandleFunc("/submissoes/{submissao_id:[0-9]+}/dados-pessoais", respostaHandler.DeleteDadosPessoaisBySubmissao).Methods("DELETE")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/aggregated", respostaHandler.GetRespostasByPergunta).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/count", respostaHandler.CountRespostasByPergunta).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/stats", respostaHandler.GetStatsByPergunta).Methods("GET")
+		respostaHandler.RegisterProtectedRoutes(respostaAdminRoutes)
 	}
 
 	// Health check e documentação

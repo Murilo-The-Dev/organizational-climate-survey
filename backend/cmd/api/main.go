@@ -69,7 +69,7 @@ func main() {
 	log.Println("✅ Conexão com banco de dados estabelecida")
 
 	// Configura middlewares globais de seguranca/limites.
-	middleware.ConfigureSecurityMiddleware(cfg.App.FrontendURL, cfg.App.RequestBodyLimitBytes)
+	middleware.ConfigureSecurityMiddleware(cfg.App.CORSAllowedOrigins, cfg.App.RequestBodyLimitBytes)
 
 	// Inicializa repositórios
 	repos := postgres.NewRepositories(db)

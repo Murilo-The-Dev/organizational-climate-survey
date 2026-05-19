@@ -494,17 +494,19 @@ func (m *MockAnalyticsRepository) GetSetorComparison(ctx context.Context, empres
 }
 
 type MockSubmissaoPesquisaRepository struct {
-	CreateFunc                    func(context.Context, *entity.SubmissaoPesquisa) error
-	GetByTokenFunc                func(context.Context, string) (*entity.SubmissaoPesquisa, error)
-	GetByIDFunc                   func(context.Context, int) (*entity.SubmissaoPesquisa, error)
-	UpdateStatusFunc              func(context.Context, int, string) error
-	MarkAsCompletedFunc           func(context.Context, int) error
-	CountByPesquisaAndIPHashFunc  func(context.Context, int, string, time.Time) (int, error)
-	CountByPesquisaAndSignalsFunc func(context.Context, int, string, string, string, time.Time) (int, error)
-	DeleteExpiredFunc             func(context.Context) (int, error)
-	ListByPesquisaFunc            func(context.Context, int) ([]*entity.SubmissaoPesquisa, error)
-	CountCompleteByPesquisaFunc   func(context.Context, int) (int, error)
-	AnonymizePersonalDataFunc     func(context.Context, int, string) error
+	CreateFunc                      func(context.Context, *entity.SubmissaoPesquisa) error
+	GetByTokenFunc                  func(context.Context, string) (*entity.SubmissaoPesquisa, error)
+	GetByIDFunc                     func(context.Context, int) (*entity.SubmissaoPesquisa, error)
+	RegisterSubmissionTokenHashFunc func(context.Context, int, string, time.Time) (bool, error)
+	DeleteSubmissionTokenHashFunc   func(context.Context, string) error
+	UpdateStatusFunc                func(context.Context, int, string) error
+	MarkAsCompletedFunc             func(context.Context, int) error
+	CountByPesquisaAndIPHashFunc    func(context.Context, int, string, time.Time) (int, error)
+	CountByPesquisaAndSignalsFunc   func(context.Context, int, string, string, string, time.Time) (int, error)
+	DeleteExpiredFunc               func(context.Context) (int, error)
+	ListByPesquisaFunc              func(context.Context, int) ([]*entity.SubmissaoPesquisa, error)
+	CountCompleteByPesquisaFunc     func(context.Context, int) (int, error)
+	AnonymizePersonalDataFunc       func(context.Context, int, string) error
 }
 
 func (m *MockSubmissaoPesquisaRepository) Create(ctx context.Context, s *entity.SubmissaoPesquisa) error {
@@ -524,6 +526,18 @@ func (m *MockSubmissaoPesquisaRepository) GetByID(ctx context.Context, id int) (
 		return m.GetByIDFunc(ctx, id)
 	}
 	return nil, errNotImplemented
+}
+func (m *MockSubmissaoPesquisaRepository) RegisterSubmissionTokenHash(ctx context.Context, pesquisaID int, tokenHash string, expiresAt time.Time) (bool, error) {
+	if m.RegisterSubmissionTokenHashFunc != nil {
+		return m.RegisterSubmissionTokenHashFunc(ctx, pesquisaID, tokenHash, expiresAt)
+	}
+	return true, nil
+}
+func (m *MockSubmissaoPesquisaRepository) DeleteSubmissionTokenHash(ctx context.Context, tokenHash string) error {
+	if m.DeleteSubmissionTokenHashFunc != nil {
+		return m.DeleteSubmissionTokenHashFunc(ctx, tokenHash)
+	}
+	return nil
 }
 func (m *MockSubmissaoPesquisaRepository) UpdateStatus(ctx context.Context, id int, status string) error {
 	if m.UpdateStatusFunc != nil {

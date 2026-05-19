@@ -4,13 +4,21 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
-	"log"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/repository"
+	"organizational-climate-survey/backend/pkg/logger"
 	"strconv"
 	"strings"
 	"time"
+)
+
+var (
+	ErrDuplicateSubmissionToken = errors.New("token de submissão já utilizado")
+	respostaUseCaseLog          = logger.New(nil)
 )
 
 // RespostaUseCase implementa casos de uso para gerenciamento de respostas
@@ -55,7 +63,7 @@ func (uc *RespostaUseCase) ValidateResposta(resposta *entity.Resposta) error {
 
 // CreateBatch cria múltiplas respostas vinculadas a uma submissão anônima
 // MODIFICADO: Agora recebe tokenAcesso e valida submissão
-func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.Resposta, tokenAcesso string) error {
+func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.Resposta, tokenAcesso, submissionToken string) error {
 	// Validações básicas
 	if len(respostas) == 0 {
 		return fmt.Errorf("lista de respostas não pode estar vazia")
@@ -69,10 +77,35 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 		return fmt.Errorf("token de acesso é obrigatório")
 	}
 
+	if strings.TrimSpace(submissionToken) == "" {
+		return fmt.Errorf("header X-Submission-Token é obrigatório")
+	}
+
+	if uc.submissaoUseCase == nil || uc.submissaoUseCase.repo == nil {
+		return fmt.Errorf("dependências de submissão não inicializadas")
+	}
+
 	// CRÍTICO: Validar token e obter submissão
 	submissao, err := uc.submissaoUseCase.ValidateToken(ctx, tokenAcesso)
 	if err != nil {
 		return fmt.Errorf("token inválido: %v", err)
+	}
+
+	now := time.Now()
+	tokenHash := hashSubmissionToken(submissionToken)
+	dedupExpiresAt := now.Add(90 * 24 * time.Hour)
+	if pesquisa, err := uc.pesquisaRepo.GetByID(ctx, submissao.IDPesquisa); err == nil {
+		if pesquisa.DataFechamento != nil && pesquisa.DataFechamento.After(now) {
+			dedupExpiresAt = pesquisa.DataFechamento.Add(24 * time.Hour)
+		}
+	}
+
+	registered, err := uc.submissaoUseCase.repo.RegisterSubmissionTokenHash(ctx, submissao.IDPesquisa, tokenHash, dedupExpiresAt)
+	if err != nil {
+		return fmt.Errorf("erro ao registrar token de submissão: %v", err)
+	}
+	if !registered {
+		return ErrDuplicateSubmissionToken
 	}
 
 	// Buscar todas as perguntas da pesquisa para validação
@@ -88,7 +121,6 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 	}
 
 	// Validar todas as respostas e setar IDSubmissao
-	now := time.Now()
 	for i, resposta := range respostas {
 		// CRÍTICO: Setar IDSubmissao antes das validações.
 		resposta.IDSubmissao = submissao.ID
@@ -116,13 +148,16 @@ func (uc *RespostaUseCase) CreateBatch(ctx context.Context, respostas []*entity.
 
 	// Cria as respostas no banco (transação única)
 	if err := uc.repo.CreateBatch(ctx, respostas); err != nil {
+		if cleanupErr := uc.submissaoUseCase.repo.DeleteSubmissionTokenHash(ctx, tokenHash); cleanupErr != nil {
+			respostaUseCaseLog.Warn("falha ao remover token de submissão após erro: %v", cleanupErr)
+		}
 		return fmt.Errorf("erro ao salvar respostas: %v", err)
 	}
 
 	// CRÍTICO: Marcar submissão como completa
 	if err := uc.submissaoUseCase.CompleteSubmission(ctx, submissao.ID); err != nil {
 		// Log erro mas não falha - respostas já foram salvas
-		log.Printf("AVISO: Respostas salvas mas erro ao marcar submissão como completa (ID %d): %v", submissao.ID, err)
+		respostaUseCaseLog.Warn("respostas salvas, mas houve falha ao completar submissão ID=%d: %v", submissao.ID, err)
 	}
 
 	return nil
@@ -275,8 +310,12 @@ func (uc *RespostaUseCase) DeleteByPesquisa(ctx context.Context, pesquisaID int,
 	}
 
 	// Log da operação de exclusão
-	log.Printf("Respostas excluídas da pesquisa %d: %d respostas removidas. Motivo: %s. Admin ID: %d",
-		pesquisaID, count, motivo, userAdminID)
+	respostaUseCaseLog.WithFields(map[string]interface{}{
+		"pesquisa_id":    pesquisaID,
+		"total_removido": count,
+		"motivo":         motivo,
+		"admin_id":       userAdminID,
+	}).Info("respostas excluídas por pesquisa")
 
 	return nil
 }
@@ -294,8 +333,18 @@ func (uc *RespostaUseCase) DeletePersonalDataBySubmissao(ctx context.Context, su
 		return err
 	}
 
-	log.Printf("Dados pessoais anonimizados para submissão %d. Motivo: %s. Admin ID: %d", submissaoID, motivo, userAdminID)
+	respostaUseCaseLog.WithFields(map[string]interface{}{
+		"submissao_id": submissaoID,
+		"motivo":       motivo,
+		"admin_id":     userAdminID,
+	}).Info("dados pessoais da submissão anonimizados")
 	return nil
+}
+
+func hashSubmissionToken(token string) string {
+	t := strings.TrimSpace(token)
+	sum := sha256.Sum256([]byte(t))
+	return hex.EncodeToString(sum[:])
 }
 
 // GetStatisticsByPergunta retorna estatísticas específicas de uma pergunta

@@ -149,6 +149,8 @@ type SubmissaoPesquisaRepository interface {
 	Create(ctx context.Context, submissao *entity.SubmissaoPesquisa) error
 	GetByToken(ctx context.Context, token string) (*entity.SubmissaoPesquisa, error)
 	GetByID(ctx context.Context, id int) (*entity.SubmissaoPesquisa, error)
+	RegisterSubmissionTokenHash(ctx context.Context, pesquisaID int, tokenHash string, expiresAt time.Time) (bool, error)
+	DeleteSubmissionTokenHash(ctx context.Context, tokenHash string) error
 	UpdateStatus(ctx context.Context, id int, status string) error
 	MarkAsCompleted(ctx context.Context, id int) error
 	CountByPesquisaAndIPHash(ctx context.Context, pesquisaID int, ipHash string, since time.Time) (int, error)

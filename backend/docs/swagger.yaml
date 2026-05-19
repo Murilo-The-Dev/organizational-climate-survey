@@ -2787,6 +2787,11 @@ paths:
       description: Submete respostas de uma pesquisa usando token de acesso gerado
         previamente.
       parameters:
+      - description: Token idempotente de submissão
+        in: header
+        name: X-Submission-Token
+        required: true
+        type: string
       - description: Token e respostas
         in: body
         name: body
@@ -2806,6 +2811,10 @@ paths:
             $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
         "401":
           description: Unauthorized
+          schema:
+            $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse'
         "500":

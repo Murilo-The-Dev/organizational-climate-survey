@@ -12,10 +12,14 @@ import (
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/application/middleware"
 	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
+
+var authHandlerLog = logger.New(nil)
 
 // AuthHandler gerencia operações de autenticação e autorização
 type AuthHandler struct {
@@ -176,15 +180,43 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} response.APIResponse
 // @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// Em uma implementação completa, aqui seria adicionado o token a uma blacklist
-	// Por enquanto, apenas retorna sucesso
+	tokenString, err := h.extractBearerToken(r)
+	if err != nil {
+		response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+		return
+	}
+
+	claims, err := h.validateJWT(tokenString)
+	if err != nil {
+		response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+		return
+	}
+
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+
+	if claims.ID != "" {
+		middleware.RevokeToken(claims.ID, expiresAt)
+	}
+	middleware.RevokeToken(tokenString, expiresAt)
 
 	userAdminID := h.getUserAdminIDFromContext(r)
+	if userAdminID == 0 {
+		userAdminID = claims.UserID
+	}
 	clientIP := h.getClientIP(r)
 
 	// Log de auditoria para logout
 	if userAdminID > 0 {
-		h.logAuditoriaUseCase.CreateSystemLog(r.Context(), "Logout", fmt.Sprintf("Usuário ID %d realizou logout", userAdminID), clientIP)
+		if err := h.logAuditoriaUseCase.CreateSystemLog(r.Context(), "Logout", fmt.Sprintf("Usuário ID %d realizou logout", userAdminID), clientIP); err != nil {
+			authHandlerLog.WithFields(map[string]interface{}{
+				"user_admin_id": userAdminID,
+				"endereco_ip":   clientIP,
+				"erro":          err.Error(),
+			}).Warn("falha ao persistir log de auditoria no logout")
+		}
 	}
 
 	response.WriteSuccess(w, http.StatusOK, "Logout realizado com sucesso", nil)
@@ -348,6 +380,7 @@ func (h *AuthHandler) generateJWT(userID, empresaID int, email string) (string, 
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "organizational-climate-survey",
 			Subject:   fmt.Sprintf("user_%d", userID),
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -368,6 +401,9 @@ func (h *AuthHandler) validateJWT(tokenString string) (*middleware.JWTClaims, er
 	}
 
 	if claims, ok := token.Claims.(*middleware.JWTClaims); ok && token.Valid {
+		if middleware.IsTokenRevoked(claims.ID, tokenString) {
+			return nil, fmt.Errorf("token revogado")
+		}
 		return claims, nil
 	}
 
@@ -420,6 +456,25 @@ func (h *AuthHandler) getClientIP(r *http.Request) string {
 		return ip
 	}
 	return r.RemoteAddr
+}
+
+func (h *AuthHandler) extractBearerToken(r *http.Request) (string, error) {
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if authHeader == "" {
+		return "", fmt.Errorf("header Authorization é obrigatório")
+	}
+
+	parts := strings.Fields(authHeader)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", fmt.Errorf("formato de token inválido. Use: Bearer <token>")
+	}
+
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", fmt.Errorf("token JWT vazio")
+	}
+
+	return token, nil
 }
 
 // RegisterPublicRoutes registra rotas de autenticacao que nao requerem JWT previo.

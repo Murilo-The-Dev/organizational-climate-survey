@@ -17,6 +17,7 @@ import (
 
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/repository"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
@@ -35,6 +36,7 @@ type rateLimitEntry struct {
 var (
 	allowedOriginsMu sync.RWMutex
 	allowedOrigins   = map[string]struct{}{"http://localhost:3000": {}}
+	middlewareLog    = logger.New(nil)
 
 	maxRequestBodyBytes int64 = defaultRequestBodyLimitBytes
 
@@ -58,7 +60,7 @@ func setAllowedOrigins(frontendURL string) {
 
 	originsValue := strings.TrimSpace(frontendURL)
 	if originsValue == "" {
-		originsValue = strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+		originsValue = strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
 	}
 	if originsValue == "" {
 		originsValue = "http://localhost:3000"
@@ -135,7 +137,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Submission-Token")
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Type, X-Request-ID, X-Response-Time")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 
@@ -158,13 +160,13 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		fmt.Printf("[%s] [%s] %s %s - %s\n",
-			requestID,
-			r.Method,
-			r.URL.Path,
-			r.RemoteAddr,
-			r.UserAgent(),
-		)
+		middlewareLog.WithFields(map[string]interface{}{
+			"request_id":  requestID,
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"remote_addr": r.RemoteAddr,
+			"user_agent":  r.UserAgent(),
+		}).Info("http request")
 
 		next.ServeHTTP(w, r)
 	})
@@ -224,13 +226,23 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 				return
 			}
 
-			tokenParts := strings.Split(authHeader, " ")
-			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			tokenParts := strings.Fields(authHeader)
+			if len(tokenParts) != 2 || !strings.EqualFold(tokenParts[0], "Bearer") {
 				response.WriteError(w, http.StatusUnauthorized, "Formato de token invalido", "Use: Bearer <token>")
 				return
 			}
 
-			tokenString := tokenParts[1]
+			tokenString := strings.TrimSpace(tokenParts[1])
+			if tokenString == "" {
+				response.WriteError(w, http.StatusUnauthorized, "Formato de token invalido", "Token JWT vazio")
+				return
+			}
+
+			if IsTokenRevoked(tokenString) {
+				response.WriteError(w, http.StatusUnauthorized, "Token invalido", "Token revogado")
+				return
+			}
+
 			token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("metodo de assinatura inesperado: %v", token.Header["alg"])
@@ -244,9 +256,18 @@ func JWTAuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 			}
 
 			if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+				if IsTokenRevoked(claims.ID, tokenString) {
+					response.WriteError(w, http.StatusUnauthorized, "Token invalido", "Token revogado")
+					return
+				}
+
 				ctx := context.WithValue(r.Context(), "user_admin_id", claims.UserID)
 				ctx = context.WithValue(ctx, "empresa_id", claims.EmpresaID)
 				ctx = context.WithValue(ctx, "user_email", claims.Email)
+				ctx = context.WithValue(ctx, "jwt_token", tokenString)
+				if claims.ID != "" {
+					ctx = context.WithValue(ctx, "jwt_jti", claims.ID)
+				}
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -348,7 +369,11 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Printf("PANIC: %v\n%s\n", err, string(debug.Stack()))
+				middlewareLog.WithFields(map[string]interface{}{
+					"panic": err,
+					"stack": string(debug.Stack()),
+					"path":  r.URL.Path,
+				}).Error("panic recovered in middleware")
 				response.WriteError(w, http.StatusInternalServerError, "Erro interno do servidor", "Ocorreu um erro inesperado")
 			}
 		}()

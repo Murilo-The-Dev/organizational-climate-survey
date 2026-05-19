@@ -31,6 +31,8 @@ func makeTestJWT(t *testing.T, secret []byte, ttl time.Duration) string {
 }
 
 func TestJWTAuthMiddleware_NoToken(t *testing.T) {
+	resetRevokedTokensForTests()
+
 	h := JWTAuthMiddleware([]byte("secret"))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -45,6 +47,8 @@ func TestJWTAuthMiddleware_NoToken(t *testing.T) {
 }
 
 func TestJWTAuthMiddleware_InvalidToken(t *testing.T) {
+	resetRevokedTokensForTests()
+
 	h := JWTAuthMiddleware([]byte("secret"))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -60,6 +64,8 @@ func TestJWTAuthMiddleware_InvalidToken(t *testing.T) {
 }
 
 func TestJWTAuthMiddleware_ExpiredToken(t *testing.T) {
+	resetRevokedTokensForTests()
+
 	secret := []byte("secret")
 	token := makeTestJWT(t, secret, -time.Minute)
 
@@ -78,6 +84,8 @@ func TestJWTAuthMiddleware_ExpiredToken(t *testing.T) {
 }
 
 func TestJWTAuthMiddleware_ValidTokenPasses(t *testing.T) {
+	resetRevokedTokensForTests()
+
 	secret := []byte("secret")
 	token := makeTestJWT(t, secret, time.Hour)
 
@@ -96,6 +104,27 @@ func TestJWTAuthMiddleware_ValidTokenPasses(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestJWTAuthMiddleware_RevokedTokenRejected(t *testing.T) {
+	resetRevokedTokensForTests()
+
+	secret := []byte("secret")
+	token := makeTestJWT(t, secret, time.Hour)
+	RevokeToken(token, time.Now().Add(time.Hour))
+
+	h := JWTAuthMiddleware(secret)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for revoked token, got %d", w.Code)
 	}
 }
 

@@ -4,6 +4,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -38,8 +39,10 @@ func NewRespostaHandler(respostaUseCase *usecase.RespostaUseCase, log logger.Log
 // @Tags respostas
 // @Accept json
 // @Produce json
+// @Param X-Submission-Token header string true "Token idempotente de submissão"
 // @Param body body dto.SubmitRespostasRequest true "Token e respostas"
 // @Success 201 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
 // @Failure 400 {object} response.APIResponse
 // @Failure 401 {object} response.APIResponse
 // @Failure 500 {object} response.APIResponse
@@ -57,6 +60,18 @@ func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request
 	if strings.TrimSpace(req.TokenAcesso) == "" {
 		h.log.WithContext(r.Context()).Info("Token não fornecido")
 		response.WriteError(w, http.StatusBadRequest, "Token obrigatório", "Token de acesso é obrigatório")
+		return
+	}
+
+	submissionToken := strings.TrimSpace(r.Header.Get("X-Submission-Token"))
+	if submissionToken == "" {
+		h.log.WithContext(r.Context()).Info("X-Submission-Token não fornecido")
+		response.WriteError(w, http.StatusBadRequest, "Header obrigatório", "Header X-Submission-Token é obrigatório")
+		return
+	}
+	if len(submissionToken) > 512 {
+		h.log.WithContext(r.Context()).Info("X-Submission-Token acima do limite")
+		response.WriteError(w, http.StatusBadRequest, "Header inválido", "Header X-Submission-Token excede 512 caracteres")
 		return
 	}
 
@@ -79,8 +94,12 @@ func (h *RespostaHandler) SubmitRespostas(w http.ResponseWriter, r *http.Request
 	}
 
 	// MODIFICADO: Passar token para usecase
-	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas, req.TokenAcesso); err != nil {
+	if err := h.respostaUseCase.CreateBatch(r.Context(), respostas, req.TokenAcesso, submissionToken); err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao salvar respostas: %v", err)
+		if errors.Is(err, usecase.ErrDuplicateSubmissionToken) {
+			response.WriteError(w, http.StatusConflict, "Submissão duplicada", "Este token de submissão já foi utilizado")
+			return
+		}
 
 		// Tratamento de erros específicos
 		if strings.Contains(err.Error(), "token inválido") || strings.Contains(err.Error(), "expirado") || strings.Contains(err.Error(), "já utilizado") {
@@ -468,9 +487,7 @@ func (h *RespostaHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra todas as rotas HTTP do handler no roteador
-func (h *RespostaHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/respostas/submit", h.SubmitRespostas).Methods("POST")
+func (h *RespostaHandler) registerProtectedRoutes(router *mux.Router) {
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/stats", h.GetRespostaStats).Methods("GET")
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/aggregated", h.GetRespostasByPesquisa).Methods("GET")
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/by-date", h.GetRespostasByDateRange).Methods("GET")
@@ -480,4 +497,20 @@ func (h *RespostaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/aggregated", h.GetRespostasByPergunta).Methods("GET")
 	router.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/count", h.CountRespostasByPergunta).Methods("GET")
 	router.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/stats", h.GetStatsByPergunta).Methods("GET")
+}
+
+// RegisterPublicRoutes registra rotas públicas de respostas.
+func (h *RespostaHandler) RegisterPublicRoutes(router *mux.Router) {
+	router.HandleFunc("/respostas/submit", h.SubmitRespostas).Methods("POST")
+}
+
+// RegisterProtectedRoutes registra rotas protegidas de respostas.
+func (h *RespostaHandler) RegisterProtectedRoutes(router *mux.Router) {
+	h.registerProtectedRoutes(router)
+}
+
+// RegisterRoutes mantém compatibilidade com chamadas existentes.
+func (h *RespostaHandler) RegisterRoutes(router *mux.Router) {
+	h.RegisterPublicRoutes(router)
+	h.RegisterProtectedRoutes(router)
 }

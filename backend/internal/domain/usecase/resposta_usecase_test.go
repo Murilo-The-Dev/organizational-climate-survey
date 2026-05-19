@@ -60,7 +60,7 @@ func TestCreateBatch_SuccessAnonymousFlow(t *testing.T) {
 	}
 
 	_, respUC := buildUseCasesForRespostaTests(subRepo, perguntaRepo, pesquisaRepo, respostaRepo)
-	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "valid-token")
+	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "valid-token", "submission-token-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCreateBatch_RejectDuplicateSubmission(t *testing.T) {
 	}
 
 	_, respUC := buildUseCasesForRespostaTests(subRepo, perguntaRepo, pesquisaRepo, respostaRepo)
-	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "used-token")
+	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "used-token", "submission-token-2")
 	if err == nil {
 		t.Fatal("expected duplicate submission error")
 	}
@@ -103,9 +103,35 @@ func TestCreateBatch_RejectExpiredOrInvalidToken(t *testing.T) {
 	}
 
 	_, respUC := buildUseCasesForRespostaTests(subRepo, perguntaRepo, pesquisaRepo, respostaRepo)
-	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "expired-token")
+	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "expired-token", "submission-token-3")
 	if err == nil {
 		t.Fatal("expected expired token error")
+	}
+}
+
+func TestCreateBatch_RejectDuplicateSubmissionTokenHeader(t *testing.T) {
+	subRepo := &testutils.MockSubmissaoPesquisaRepository{}
+	perguntaRepo := &testutils.MockPerguntaRepository{}
+	pesquisaRepo := &testutils.MockPesquisaRepository{}
+	respostaRepo := &testutils.MockRespostaRepository{}
+
+	subRepo.GetByTokenFunc = func(ctx context.Context, token string) (*entity.SubmissaoPesquisa, error) {
+		return &entity.SubmissaoPesquisa{ID: 88, IDPesquisa: 7, Status: "pendente", DataExpiracao: time.Now().Add(time.Hour)}, nil
+	}
+	subRepo.RegisterSubmissionTokenHashFunc = func(ctx context.Context, pesquisaID int, tokenHash string, expiresAt time.Time) (bool, error) {
+		return false, nil
+	}
+	pesquisaRepo.GetByIDFunc = func(ctx context.Context, id int) (*entity.Pesquisa, error) {
+		return &entity.Pesquisa{ID: id, Status: "Ativa"}, nil
+	}
+	perguntaRepo.ListByPesquisaFunc = func(ctx context.Context, pesquisaID int) ([]*entity.Pergunta, error) {
+		return []*entity.Pergunta{{ID: 5, IDPesquisa: pesquisaID}}, nil
+	}
+
+	_, respUC := buildUseCasesForRespostaTests(subRepo, perguntaRepo, pesquisaRepo, respostaRepo)
+	err := respUC.CreateBatch(context.Background(), []*entity.Resposta{{IDPergunta: 5, ValorResposta: "Sim"}}, "valid-token", "dup-token")
+	if !errors.Is(err, ErrDuplicateSubmissionToken) {
+		t.Fatalf("expected ErrDuplicateSubmissionToken, got: %v", err)
 	}
 }
 

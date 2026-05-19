@@ -14,7 +14,7 @@ type Config struct {
 		Name                  string // Nome da aplicação
 		Port                  string // Porta em que a aplicação será executada
 		Env                   string // Ambiente (development, production, etc.)
-		FrontendURL           string // Lista de origens permitidas no CORS (separadas por vírgula)
+		CORSAllowedOrigins    string // Lista de origens permitidas no CORS (separadas por vírgula)
 		RequestBodyLimitBytes int64  // Tamanho máximo do corpo de requisição
 	}
 	Database struct {
@@ -46,7 +46,7 @@ func LoadConfig() (*Config, error) {
 	cfg.App.Name = getEnvWithDefault("APP_NAME", "organizational-climate-survey")
 	cfg.App.Port = getEnvWithDefault("APP_PORT", "8080")
 	cfg.App.Env = getEnvWithDefault("APP_ENV", "development")
-	cfg.App.FrontendURL = getEnvWithDefault("FRONTEND_URL", "http://localhost:3000")
+	cfg.App.CORSAllowedOrigins = getEnvWithDefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 
 	requestLimitBytes, err := getEnvAsInt64("REQUEST_BODY_LIMIT_BYTES", defaultRequestBodyLimitBytes)
 	if err != nil {
@@ -81,6 +81,9 @@ func LoadConfig() (*Config, error) {
 	cfg.JWT.Secret = os.Getenv("JWT_SECRET")
 
 	cfg.Crypto.HashSalt = getEnvWithDefault("HASH_SALT", "default-salt-change-in-production-12345")
+	if strings.EqualFold(cfg.App.Env, "production") && cfg.Crypto.HashSalt == "default-salt-change-in-production-12345" {
+		return nil, fmt.Errorf("HASH_SALT padrão não é permitido em produção")
+	}
 
 	cfg.Log.Level = getEnvWithDefault("LOG_LEVEL", "debug")
 

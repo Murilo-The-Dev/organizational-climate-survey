@@ -415,7 +415,7 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 	}
 
 	if !h.isValidExportFormat(format) {
-		response.WriteError(w, http.StatusBadRequest, "Formato inválido", "Formato deve ser: pdf ou excel")
+		response.WriteError(w, http.StatusBadRequest, "Formato inválido", "Formato deve ser: pdf, xlsx ou csv")
 		return
 	}
 
@@ -446,7 +446,9 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(exportData)
+	if _, err := w.Write(exportData); err != nil {
+		h.log.WithContext(r.Context()).Error("falha ao escrever resposta de exportação do dashboard: %v", err)
+	}
 }
 
 // ExportPesquisa exporta dados analíticos a partir do ID da pesquisa.
@@ -511,7 +513,9 @@ func (h *DashboardHandler) ExportPesquisa(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(exportData)
+	if _, err := w.Write(exportData); err != nil {
+		h.log.WithContext(r.Context()).Error("falha ao escrever resposta de exportação da pesquisa: %v", err)
+	}
 }
 
 // GetDashboardMetrics retorna métricas resumidas de um dashboard

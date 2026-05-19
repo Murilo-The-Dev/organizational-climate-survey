@@ -3495,6 +3495,13 @@ const docTemplate = `{
                 "summary": "Submeter respostas anônimas",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Token idempotente de submissão",
+                        "name": "X-Submission-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Token e respostas",
                         "name": "body",
                         "in": "body",
@@ -3519,6 +3526,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/organizational-climate-survey_backend_internal_application_dto_response.APIResponse"
                         }
