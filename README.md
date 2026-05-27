@@ -25,7 +25,7 @@ Este sistema foi desenvolvido como **projeto de extensão curricular** pelos alu
 |------|----|-----------------|
 | **Murilo do Amaral Christofoletti** | 8204209 | Backend |
 | **Alexandre Ricardo Calore** | 8205280 | Frontend |
-| **Geovanni Adrian de Oliveira Muniz** | 8203566 | Database |
+| **Geovanni Muniz** | 8203566 | Database |
 | **Guilherme Rodrigues da Conceição** | 8183961 | Frontend |
 
 ### 🎯 Objetivo
@@ -567,7 +567,7 @@ refactor(repos): migra queries para prepared statements
 | **Murilo Christofoletti** | [@Murilo-The-Dev](https://github.com/Murilo-The-Dev) |
 | **Geovanni Muniz** | [@geovanniz](https://github.com/geovanniz) |
 | **Guilherme Conceição** | [@rodriguesdev-ui](https://github.com/rodriguesdev-ui) |
-| **Alexandre Calore** | [@AlexandreCalore](https://github.com/AlexandreCalore) |
+| **Alexandre Calore** | [@AlexandreCaloreDev](https://github.com/AlexandreCaloreDev) |
 
 ### 🐛 Reportar Bugs
 
