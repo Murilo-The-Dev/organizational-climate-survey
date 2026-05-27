@@ -9,9 +9,12 @@ import (
 	"fmt"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/repository"
+	"organizational-climate-survey/backend/pkg/logger"
 	"strings"
 	"time"
 )
+
+var pesquisaUseCaseLog = logger.New(nil)
 
 // PesquisaUseCase implementa casos de uso para gerenciamento de pesquisas
 type PesquisaUseCase struct {
@@ -36,6 +39,21 @@ func NewPesquisaUseCase(
 		setorRepo:        setorRepo,
 		dashboardRepo:    dashboardRepo,
 		logAuditoriaRepo: logRepo,
+	}
+}
+
+func (uc *PesquisaUseCase) writeAuditLog(ctx context.Context, entry *entity.LogAuditoria) {
+	if uc.logAuditoriaRepo == nil || entry == nil {
+		return
+	}
+
+	if err := uc.logAuditoriaRepo.Create(ctx, entry); err != nil {
+		pesquisaUseCaseLog.WithFields(map[string]interface{}{
+			"acao":          entry.AcaoRealizada,
+			"user_admin_id": entry.IDUserAdmin,
+			"endereco_ip":   entry.EnderecoIP,
+			"erro":          err.Error(),
+		}).Warn("falha ao persistir log de auditoria de pesquisa")
 	}
 }
 
@@ -129,7 +147,10 @@ func (uc *PesquisaUseCase) Create(ctx context.Context, pesquisa *entity.Pesquisa
 
 	if err := uc.dashboardRepo.Create(ctx, dashboard); err != nil {
 		// Log do erro, mas não falha a criação da pesquisa
-		fmt.Printf("Aviso: erro ao criar dashboard para pesquisa %d: %v\n", pesquisa.ID, err)
+		pesquisaUseCaseLog.WithFields(map[string]interface{}{
+			"pesquisa_id": pesquisa.ID,
+			"erro":        err.Error(),
+		}).Warn("falha ao criar dashboard automático da pesquisa")
 	}
 
 	// Log de auditoria
@@ -140,7 +161,7 @@ func (uc *PesquisaUseCase) Create(ctx context.Context, pesquisa *entity.Pesquisa
 		Detalhes:      fmt.Sprintf("Pesquisa criada: %s (ID: %d)", pesquisa.Titulo, pesquisa.ID),
 		EnderecoIP:    enderecoIP,
 	}
-	uc.logAuditoriaRepo.Create(ctx, log)
+	uc.writeAuditLog(ctx, log)
 
 	return nil
 }
@@ -323,7 +344,7 @@ func (uc *PesquisaUseCase) Update(ctx context.Context, pesquisa *entity.Pesquisa
 		Detalhes:      fmt.Sprintf("Pesquisa atualizada: %s (ID: %d)", pesquisa.Titulo, pesquisa.ID),
 		EnderecoIP:    enderecoIP,
 	}
-	uc.logAuditoriaRepo.Create(ctx, log)
+	uc.writeAuditLog(ctx, log)
 
 	return nil
 }
@@ -372,7 +393,7 @@ func (uc *PesquisaUseCase) UpdateStatus(ctx context.Context, id int, status stri
 		Detalhes:      fmt.Sprintf("Status alterado de '%s' para '%s' - Pesquisa: %s (ID: %d)", pesquisa.Status, status, pesquisa.Titulo, pesquisa.ID),
 		EnderecoIP:    enderecoIP,
 	}
-	uc.logAuditoriaRepo.Create(ctx, log)
+	uc.writeAuditLog(ctx, log)
 
 	return nil
 }
@@ -451,7 +472,7 @@ func (uc *PesquisaUseCase) Delete(ctx context.Context, id int, userAdminID int, 
 		Detalhes:      fmt.Sprintf("Pesquisa deletada: %s (ID: %d)", pesquisa.Titulo, pesquisa.ID),
 		EnderecoIP:    enderecoIP,
 	}
-	uc.logAuditoriaRepo.Create(ctx, log)
+	uc.writeAuditLog(ctx, log)
 
 	return nil
 }
@@ -493,7 +514,7 @@ func (uc *PesquisaUseCase) RegenerateLinkAcesso(ctx context.Context, pesquisaID 
 		Detalhes:      fmt.Sprintf("Novo link gerado para pesquisa: %s (ID: %d)", pesquisa.Titulo, pesquisaID),
 		EnderecoIP:    enderecoIP,
 	}
-	uc.logAuditoriaRepo.Create(ctx, log)
+	uc.writeAuditLog(ctx, log)
 
 	return novoLink, nil
 }

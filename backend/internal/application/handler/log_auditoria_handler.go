@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
+
 	"github.com/gorilla/mux"
 )
 
@@ -31,6 +32,16 @@ func NewLogAuditoriaHandler(logAuditoriaUseCase *usecase.LogAuditoriaUseCase, lo
 }
 
 // CreateLogAuditoria cria novo registro de auditoria no sistema
+// @Summary Criar log de auditoria
+// @Tags logs-auditoria
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.LogAuditoriaCreateRequest true "Dados do log"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/logs-auditoria [post]
 func (h *LogAuditoriaHandler) CreateLogAuditoria(w http.ResponseWriter, r *http.Request) {
 	var req dto.LogAuditoriaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -54,6 +65,16 @@ func (h *LogAuditoriaHandler) CreateLogAuditoria(w http.ResponseWriter, r *http.
 }
 
 // GetLogAuditoria busca registro de auditoria por ID
+// @Summary Buscar log de auditoria por ID
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do log"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/logs-auditoria/{id} [get]
 func (h *LogAuditoriaHandler) GetLogAuditoria(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -76,6 +97,17 @@ func (h *LogAuditoriaHandler) GetLogAuditoria(w http.ResponseWriter, r *http.Req
 }
 
 // ListLogsByEmpresa lista logs de auditoria de empresa com paginação
+// @Summary Listar logs por empresa
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param limit query int false "Limite" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/logs-auditoria [get]
 func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -129,6 +161,17 @@ func (h *LogAuditoriaHandler) ListLogsByEmpresa(w http.ResponseWriter, r *http.R
 }
 
 // ListLogsByUsuario lista logs de auditoria de usuário específico com paginação
+// @Summary Listar logs por usuário administrador
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param user_admin_id path int true "ID do usuário administrador"
+// @Param limit query int false "Limite" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{user_admin_id}/logs-auditoria [get]
 func (h *LogAuditoriaHandler) ListLogsByUsuario(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userAdminID, err := strconv.Atoi(vars["user_admin_id"])
@@ -176,6 +219,17 @@ func (h *LogAuditoriaHandler) ListLogsByUsuario(w http.ResponseWriter, r *http.R
 }
 
 // ListLogsByDateRange lista logs de auditoria filtrados por período
+// @Summary Listar logs por período
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param start_date query string true "Data inicial (RFC3339)"
+// @Param end_date query string true "Data final (RFC3339)"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/logs-auditoria/by-date [get]
 func (h *LogAuditoriaHandler) ListLogsByDateRange(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -217,6 +271,18 @@ func (h *LogAuditoriaHandler) ListLogsByDateRange(w http.ResponseWriter, r *http
 }
 
 // ListLogsByAction lista logs de auditoria filtrados por tipo de ação
+// @Summary Listar logs por ação
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param acao query string true "Ação"
+// @Param limit query int false "Limite" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/logs-auditoria/by-action [get]
 func (h *LogAuditoriaHandler) ListLogsByAction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -270,6 +336,17 @@ func (h *LogAuditoriaHandler) ListLogsByAction(w http.ResponseWriter, r *http.Re
 }
 
 // GetAuditSummary retorna resumo estatístico de auditoria por período
+// @Summary Obter resumo de auditoria
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param start_date query string true "Data inicial (RFC3339)"
+// @Param end_date query string true "Data final (RFC3339)"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/logs-auditoria/summary [get]
 func (h *LogAuditoriaHandler) GetAuditSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -305,9 +382,19 @@ func (h *LogAuditoriaHandler) GetAuditSummary(w http.ResponseWriter, r *http.Req
 }
 
 // CleanOldLogs remove logs de auditoria antigos baseado em período de retenção
+// @Summary Limpar logs antigos
+// @Tags logs-auditoria
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.RetentionRequest true "Configuração de retenção"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/logs-auditoria/clean [post]
 func (h *LogAuditoriaHandler) CleanOldLogs(w http.ResponseWriter, r *http.Request) {
 	var req dto.RetentionRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -333,6 +420,18 @@ func (h *LogAuditoriaHandler) CleanOldLogs(w http.ResponseWriter, r *http.Reques
 }
 
 // ExportLogs exporta logs de auditoria em formato específico
+// @Summary Exportar logs de auditoria
+// @Tags logs-auditoria
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param start_date query string true "Data inicial (RFC3339)"
+// @Param end_date query string true "Data final (RFC3339)"
+// @Param format query string false "Formato" Enums(csv,excel) default(csv)
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/logs-auditoria/export [get]
 func (h *LogAuditoriaHandler) ExportLogs(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])

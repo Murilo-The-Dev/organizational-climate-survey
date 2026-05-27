@@ -114,11 +114,6 @@ func (uc *BootstrapUseCase) validateEmpresa(empresa *entity.Empresa) error {
         return fmt.Errorf("CNPJ é obrigatório")
     }
 
-    // CNPJ format validation (básico)
-    if !uc.isValidCNPJFormat(empresa.CNPJ) {
-        return fmt.Errorf("formato de CNPJ inválido")
-    }
-
     return nil
 }
 
@@ -138,10 +133,6 @@ func (uc *BootstrapUseCase) validateUsuario(usuario *entity.UsuarioAdministrador
 
     if strings.TrimSpace(usuario.Email) == "" {
         return fmt.Errorf("email é obrigatório")
-    }
-
-    if !uc.isValidEmailFormat(usuario.Email) {
-        return fmt.Errorf("formato de email inválido")
     }
 
     if strings.TrimSpace(usuario.SenhaHash) == "" {

@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
 	"organizational-climate-survey/backend/pkg/validator"
 
@@ -36,15 +36,26 @@ func NewUsuarioAdministradorHandler(usuarioUseCase *usecase.UsuarioAdministrador
 
 // PasswordUpdateRequest representa requisição de atualização de senha
 type PasswordUpdateRequest struct {
-	NovaSenha string `json:"nova_senha"` // Nova senha a ser definida
+	NovaSenha string `json:"nova_senha" example:"NovaSenha@123"` // Nova senha a ser definida
 }
 
 // StatusUpdateRequest representa requisição de atualização de status
 type StatusUpdateRequest struct {
-	Status string `json:"status"` // Novo status do usuário
+	Status string `json:"status" example:"Ativo"` // Novo status do usuário
 }
 
 // CreateUsuarioAdministrador cria novo usuário administrativo no sistema
+// @Summary Criar usuário administrador
+// @Tags usuarios-administradores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.UsuarioAdministradorCreateRequest true "Dados do usuário administrador"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores [post]
 func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	var req dto.UsuarioAdministradorCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -97,6 +108,16 @@ func (h *UsuarioAdministradorHandler) CreateUsuarioAdministrador(w http.Response
 }
 
 // GetUsuarioAdministrador busca usuário administrativo por ID
+// @Summary Buscar usuário administrador por ID
+// @Tags usuarios-administradores
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do usuário administrador"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{id} [get]
 func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -120,6 +141,16 @@ func (h *UsuarioAdministradorHandler) GetUsuarioAdministrador(w http.ResponseWri
 }
 
 // ListUsuariosByEmpresa lista usuários administrativos de uma empresa com filtro opcional de status
+// @Summary Listar usuários administradores por empresa
+// @Tags usuarios-administradores
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param status query string false "Status do usuário"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/usuarios-administradores [get]
 func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -129,9 +160,9 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 	}
 
 	status := r.URL.Query().Get("status")
-	
+
 	var usuarios []*entity.UsuarioAdministrador
-	
+
 	// Aplicar filtro de status se fornecido
 	if status != "" {
 		usuarios, err = h.usuarioUseCase.ListByStatus(r.Context(), empresaID, status)
@@ -154,6 +185,19 @@ func (h *UsuarioAdministradorHandler) ListUsuariosByEmpresa(w http.ResponseWrite
 }
 
 // UpdateUsuarioAdministrador atualiza dados de usuário administrativo existente
+// @Summary Atualizar usuário administrador
+// @Tags usuarios-administradores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do usuário administrador"
+// @Param body body dto.UsuarioAdministradorUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{id} [put]
 func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -209,6 +253,18 @@ func (h *UsuarioAdministradorHandler) UpdateUsuarioAdministrador(w http.Response
 }
 
 // UpdatePassword atualiza senha de usuário administrativo
+// @Summary Atualizar senha de usuário administrador
+// @Tags usuarios-administradores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do usuário administrador"
+// @Param body body PasswordUpdateRequest true "Nova senha"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{id}/password [put]
 func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -246,6 +302,18 @@ func (h *UsuarioAdministradorHandler) UpdatePassword(w http.ResponseWriter, r *h
 }
 
 // UpdateStatus atualiza status de usuário administrativo
+// @Summary Atualizar status de usuário administrador
+// @Tags usuarios-administradores
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do usuário administrador"
+// @Param body body StatusUpdateRequest true "Novo status"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{id}/status [put]
 func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -283,6 +351,17 @@ func (h *UsuarioAdministradorHandler) UpdateStatus(w http.ResponseWriter, r *htt
 }
 
 // DeleteUsuarioAdministrador inativa usuário administrativo (soft delete)
+// @Summary Inativar usuário administrador
+// @Tags usuarios-administradores
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do usuário administrador"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/{id} [delete]
 func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -311,6 +390,16 @@ func (h *UsuarioAdministradorHandler) DeleteUsuarioAdministrador(w http.Response
 }
 
 // GetUsuarioByEmail busca usuário administrativo por endereço de email
+// @Summary Buscar usuário administrador por email
+// @Tags usuarios-administradores
+// @Produce json
+// @Security BearerAuth
+// @Param email path string true "Email do usuário administrador"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/usuarios-administradores/email/{email} [get]
 func (h *UsuarioAdministradorHandler) GetUsuarioByEmail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	email := vars["email"]

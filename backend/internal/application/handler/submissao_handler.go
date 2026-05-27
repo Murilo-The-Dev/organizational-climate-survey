@@ -33,6 +33,20 @@ func NewSubmissaoHandler(submissaoUseCase *usecase.SubmissaoPesquisaUseCase, log
 
 // GenerateAccessToken gera token único para acesso anônimo à pesquisa
 // POST /pesquisas/{pesquisa_id}/token
+// @Summary Gerar token de acesso para pesquisa
+// @Description Gera token temporário para submissão anônima de respostas.
+// @Tags submissoes
+// @Accept json
+// @Produce json
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Param body body dto.GenerateTokenRequest false "Fingerprint opcional"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 429 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/token [post]
 func (h *SubmissaoHandler) GenerateAccessToken(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -51,16 +65,18 @@ func (h *SubmissaoHandler) GenerateAccessToken(w http.ResponseWriter, r *http.Re
 	clientIP := h.getClientIP(r)
 
 	// Gerar token
-	token, expiresAt, err := h.submissaoUseCase.GenerateAccessToken(
+	token, expiresAt, err := h.submissaoUseCase.GenerateAccessTokenWithMetadata(
 		r.Context(),
 		pesquisaID,
 		clientIP,
 		req.Fingerprint,
+		r.UserAgent(),
+		r.Header.Get("Accept-Language"),
 	)
 
 	if err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao gerar token pesquisa ID=%d: %v", pesquisaID, err)
-		
+
 		if strings.Contains(err.Error(), "não está ativa") {
 			response.WriteError(w, http.StatusBadRequest, "Pesquisa inativa", err.Error())
 			return
@@ -73,11 +89,15 @@ func (h *SubmissaoHandler) GenerateAccessToken(w http.ResponseWriter, r *http.Re
 			response.WriteError(w, http.StatusTooManyRequests, "Limite excedido", err.Error())
 			return
 		}
+		if strings.Contains(err.Error(), "Você já respondeu esta pesquisa.") {
+			response.WriteError(w, http.StatusConflict, "Submissão duplicada", "Você já respondeu esta pesquisa.")
+			return
+		}
 		if strings.Contains(err.Error(), "não encontrada") {
 			response.WriteError(w, http.StatusNotFound, "Pesquisa não encontrada", err.Error())
 			return
 		}
-		
+
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", "Erro ao gerar token de acesso")
 		return
 	}
@@ -97,6 +117,16 @@ func (h *SubmissaoHandler) GenerateAccessToken(w http.ResponseWriter, r *http.Re
 
 // GetSubmissionStats retorna estatísticas de submissões de uma pesquisa
 // GET /pesquisas/{pesquisa_id}/submissions/stats
+// @Summary Obter estatísticas de submissões
+// @Tags submissoes
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/submissions/stats [get]
 func (h *SubmissaoHandler) GetSubmissionStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -108,12 +138,12 @@ func (h *SubmissaoHandler) GetSubmissionStats(w http.ResponseWriter, r *http.Req
 	stats, err := h.submissaoUseCase.GetSubmissionStats(r.Context(), pesquisaID)
 	if err != nil {
 		h.log.WithContext(r.Context()).Error("Erro ao buscar stats pesquisa ID=%d: %v", pesquisaID, err)
-		
+
 		if strings.Contains(err.Error(), "não encontrada") {
 			response.WriteError(w, http.StatusNotFound, "Pesquisa não encontrada", err.Error())
 			return
 		}
-		
+
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
 	}
@@ -128,21 +158,28 @@ func (h *SubmissaoHandler) getClientIP(r *http.Request) string {
 		// Pegar primeiro IP da lista (cliente original)
 		return strings.Split(ip, ",")[0]
 	}
-	
+
 	// Tentar X-Real-IP
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
 		return ip
 	}
-	
+
 	// Fallback para RemoteAddr
 	return strings.Split(r.RemoteAddr, ":")[0]
 }
 
-// RegisterRoutes registra todas as rotas HTTP do handler no roteador
-func (h *SubmissaoHandler) RegisterRoutes(router *mux.Router) {
-	// Rota pública - gerar token
+// RegisterPublicRoutes registra rotas publicas de submissao.
+func (h *SubmissaoHandler) RegisterPublicRoutes(router *mux.Router) {
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/token", h.GenerateAccessToken).Methods("POST")
-	
-	// Rota protegida - estatísticas (admin)
+}
+
+// RegisterProtectedRoutes registra rotas protegidas de submissao.
+func (h *SubmissaoHandler) RegisterProtectedRoutes(router *mux.Router) {
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/submissions/stats", h.GetSubmissionStats).Methods("GET")
+}
+
+// RegisterRoutes mantem compatibilidade com chamadas existentes.
+func (h *SubmissaoHandler) RegisterRoutes(router *mux.Router) {
+	h.RegisterPublicRoutes(router)
+	h.RegisterProtectedRoutes(router)
 }

@@ -12,10 +12,14 @@ import (
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/application/middleware"
 	"organizational-climate-survey/backend/internal/domain/usecase"
+	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
+
+var authHandlerLog = logger.New(nil)
 
 // AuthHandler gerencia operações de autenticação e autorização
 type AuthHandler struct {
@@ -38,6 +42,17 @@ func NewAuthHandler(
 }
 
 // Login realiza autenticação do usuário e retorna token JWT
+// @Summary Autenticar administrador
+// @Description Realiza login com email e senha e retorna token JWT para uso nos endpoints protegidos.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body LoginRequest true "Credenciais de acesso"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 
@@ -93,6 +108,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // RefreshToken renova um token JWT existente
+// @Summary Renovar token JWT
+// @Description Valida o token atual e emite um novo token JWT.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body RefreshTokenRequest true "Token atual"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 
@@ -110,6 +136,10 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	claims, err := h.validateJWT(req.Token)
 	if err != nil {
 		response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+		return
+	}
+	if claims.ExpiresAt == nil || time.Now().After(claims.ExpiresAt.Time) {
+		response.WriteError(w, http.StatusUnauthorized, "Token expirado", "Faça login novamente para obter um novo token")
 		return
 	}
 
@@ -141,22 +171,69 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout invalida o token atual do usuário
+// @Summary Encerrar sessão
+// @Description Registra logout do usuário autenticado.
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// Em uma implementação completa, aqui seria adicionado o token a uma blacklist
-	// Por enquanto, apenas retorna sucesso
+	tokenString, err := h.extractBearerToken(r)
+	if err != nil {
+		response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+		return
+	}
+
+	claims, err := h.validateJWT(tokenString)
+	if err != nil {
+		response.WriteError(w, http.StatusUnauthorized, "Token inválido", err.Error())
+		return
+	}
+
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+
+	if claims.ID != "" {
+		middleware.RevokeToken(claims.ID, expiresAt)
+	}
+	middleware.RevokeToken(tokenString, expiresAt)
 
 	userAdminID := h.getUserAdminIDFromContext(r)
+	if userAdminID == 0 {
+		userAdminID = claims.UserID
+	}
 	clientIP := h.getClientIP(r)
 
 	// Log de auditoria para logout
 	if userAdminID > 0 {
-		h.logAuditoriaUseCase.CreateSystemLog(r.Context(), "Logout", fmt.Sprintf("Usuário ID %d realizou logout", userAdminID), clientIP)
+		if err := h.logAuditoriaUseCase.CreateSystemLog(r.Context(), "Logout", fmt.Sprintf("Usuário ID %d realizou logout", userAdminID), clientIP); err != nil {
+			authHandlerLog.WithFields(map[string]interface{}{
+				"user_admin_id": userAdminID,
+				"endereco_ip":   clientIP,
+				"erro":          err.Error(),
+			}).Warn("falha ao persistir log de auditoria no logout")
+		}
 	}
 
 	response.WriteSuccess(w, http.StatusOK, "Logout realizado com sucesso", nil)
 }
 
 // ValidateToken verifica se um token JWT é válido
+// @Summary Validar token JWT
+// @Description Valida um token JWT informado e retorna dados básicos do usuário associado.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body ValidateTokenRequest true "Token para validação"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/auth/validate [post]
 func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 	var req ValidateTokenRequest
 
@@ -200,6 +277,18 @@ func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // ChangePassword permite ao usuário alterar sua própria senha
+// @Summary Alterar senha do usuário autenticado
+// @Description Valida a senha atual e altera para a nova senha informada.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body ChangePasswordRequest true "Senha atual e nova senha"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/auth/change-password [post]
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
 
@@ -243,6 +332,16 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // ForgotPassword inicia o processo de recuperação de senha
+// @Summary Solicitar recuperação de senha
+// @Description Inicia o fluxo de recuperação de senha para o email informado.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body ForgotPasswordRequest true "Email para recuperação"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/auth/forgot-password [post]
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var req ForgotPasswordRequest
 
@@ -281,6 +380,7 @@ func (h *AuthHandler) generateJWT(userID, empresaID int, email string) (string, 
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "organizational-climate-survey",
 			Subject:   fmt.Sprintf("user_%d", userID),
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -301,6 +401,9 @@ func (h *AuthHandler) validateJWT(tokenString string) (*middleware.JWTClaims, er
 	}
 
 	if claims, ok := token.Claims.(*middleware.JWTClaims); ok && token.Valid {
+		if middleware.IsTokenRevoked(claims.ID, tokenString) {
+			return nil, fmt.Errorf("token revogado")
+		}
 		return claims, nil
 	}
 
@@ -355,15 +458,41 @@ func (h *AuthHandler) getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// RegisterRoutes registra as rotas do handler
-func (h *AuthHandler) RegisterRoutes(router *mux.Router) {
-	// Rotas públicas (sem autenticação)
+func (h *AuthHandler) extractBearerToken(r *http.Request) (string, error) {
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if authHeader == "" {
+		return "", fmt.Errorf("header Authorization é obrigatório")
+	}
+
+	parts := strings.Fields(authHeader)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", fmt.Errorf("formato de token inválido. Use: Bearer <token>")
+	}
+
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", fmt.Errorf("token JWT vazio")
+	}
+
+	return token, nil
+}
+
+// RegisterPublicRoutes registra rotas de autenticacao que nao requerem JWT previo.
+func (h *AuthHandler) RegisterPublicRoutes(router *mux.Router) {
 	router.HandleFunc("/auth/login", h.Login).Methods("POST")
 	router.HandleFunc("/auth/forgot-password", h.ForgotPassword).Methods("POST")
 	router.HandleFunc("/auth/validate", h.ValidateToken).Methods("POST")
-
-	// Rotas que requerem autenticação
 	router.HandleFunc("/auth/refresh", h.RefreshToken).Methods("POST")
+}
+
+// RegisterProtectedRoutes registra rotas que requerem JWT valido.
+func (h *AuthHandler) RegisterProtectedRoutes(router *mux.Router) {
 	router.HandleFunc("/auth/logout", h.Logout).Methods("POST")
 	router.HandleFunc("/auth/change-password", h.ChangePassword).Methods("POST")
+}
+
+// RegisterRoutes mantem compatibilidade com chamadas existentes.
+func (h *AuthHandler) RegisterRoutes(router *mux.Router) {
+	h.RegisterPublicRoutes(router)
+	h.RegisterProtectedRoutes(router)
 }

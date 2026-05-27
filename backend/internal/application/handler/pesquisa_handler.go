@@ -3,24 +3,34 @@
 package handler
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"fmt"
-	"organizational-climate-survey/backend/internal/domain/entity"
+
 	"organizational-climate-survey/backend/internal/application/dto"
-	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/internal/application/dto/response"
+	"organizational-climate-survey/backend/internal/domain/entity"
+	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
 
 	"github.com/gorilla/mux"
+	"github.com/skip2/go-qrcode"
 )
 
 // PesquisaHandler gerencia requisições HTTP relacionadas a pesquisas de clima
 type PesquisaHandler struct {
 	pesquisaUseCase *usecase.PesquisaUseCase
 	log             logger.Logger
+}
+
+// PesquisaStatusUpdateRequest define payload para atualização de status da pesquisa.
+type PesquisaStatusUpdateRequest struct {
+	Status string `json:"status" example:"Ativa"`
 }
 
 // NewPesquisaHandler cria nova instância do handler de pesquisas
@@ -32,6 +42,16 @@ func NewPesquisaHandler(pesquisaUseCase *usecase.PesquisaUseCase, log logger.Log
 }
 
 // CreatePesquisa cria nova pesquisa de clima no sistema
+// @Summary Criar pesquisa
+// @Tags pesquisas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.PesquisaCreateRequest true "Dados da pesquisa"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas [post]
 func (h *PesquisaHandler) CreatePesquisa(w http.ResponseWriter, r *http.Request) {
 	var req dto.PesquisaCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -62,6 +82,16 @@ func (h *PesquisaHandler) CreatePesquisa(w http.ResponseWriter, r *http.Request)
 }
 
 // GetPesquisa busca pesquisa de clima por ID
+// @Summary Buscar pesquisa por ID
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{id} [get]
 func (h *PesquisaHandler) GetPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -85,6 +115,16 @@ func (h *PesquisaHandler) GetPesquisa(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPesquisaByLink busca pesquisa de clima por link de acesso público
+// @Summary Buscar pesquisa por link
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param link path string true "Link de acesso da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/link/{link} [get]
 func (h *PesquisaHandler) GetPesquisaByLink(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	link := vars["link"]
@@ -109,6 +149,16 @@ func (h *PesquisaHandler) GetPesquisaByLink(w http.ResponseWriter, r *http.Reque
 }
 
 // ListPesquisasByEmpresa lista pesquisas de empresa com filtro opcional de status
+// @Summary Listar pesquisas por empresa
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param status query string false "Status da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/pesquisas [get]
 func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -118,9 +168,9 @@ func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.
 	}
 
 	status := r.URL.Query().Get("status")
-	
+
 	var pesquisas []*entity.Pesquisa
-	
+
 	if status != "" {
 		pesquisas, err = h.pesquisaUseCase.ListByStatus(r.Context(), empresaID, status)
 	} else {
@@ -142,6 +192,15 @@ func (h *PesquisaHandler) ListPesquisasByEmpresa(w http.ResponseWriter, r *http.
 }
 
 // ListPesquisasBySetor lista todas as pesquisas de um setor específico
+// @Summary Listar pesquisas por setor
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param setor_id path int true "ID do setor"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/setores/{setor_id}/pesquisas [get]
 func (h *PesquisaHandler) ListPesquisasBySetor(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setorID, err := strconv.Atoi(vars["setor_id"])
@@ -166,6 +225,15 @@ func (h *PesquisaHandler) ListPesquisasBySetor(w http.ResponseWriter, r *http.Re
 }
 
 // ListPesquisasActive lista todas as pesquisas ativas de uma empresa
+// @Summary Listar pesquisas ativas por empresa
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/pesquisas/active [get]
 func (h *PesquisaHandler) ListPesquisasActive(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -190,6 +258,18 @@ func (h *PesquisaHandler) ListPesquisasActive(w http.ResponseWriter, r *http.Req
 }
 
 // UpdatePesquisa atualiza dados de pesquisa de clima existente
+// @Summary Atualizar pesquisa
+// @Tags pesquisas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pesquisa"
+// @Param body body dto.PesquisaUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{id} [put]
 func (h *PesquisaHandler) UpdatePesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -234,6 +314,18 @@ func (h *PesquisaHandler) UpdatePesquisa(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateStatusPesquisa atualiza apenas status de pesquisa existente
+// @Summary Atualizar status da pesquisa
+// @Tags pesquisas
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pesquisa"
+// @Param body body PesquisaStatusUpdateRequest true "Novo status da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{id}/status [put]
 func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -242,7 +334,7 @@ func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var req StatusUpdateRequest
+	var req PesquisaStatusUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "Dados inválidos", err.Error())
 		return
@@ -270,6 +362,17 @@ func (h *PesquisaHandler) UpdateStatusPesquisa(w http.ResponseWriter, r *http.Re
 }
 
 // DeletePesquisa remove pesquisa de clima do sistema
+// @Summary Remover pesquisa
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{id} [delete]
 func (h *PesquisaHandler) DeletePesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -298,6 +401,16 @@ func (h *PesquisaHandler) DeletePesquisa(w http.ResponseWriter, r *http.Request)
 }
 
 // GenerateQRCode gera código QR para acesso público à pesquisa
+// @Summary Gerar QR Code da pesquisa
+// @Tags pesquisas
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{id}/qrcode [post]
 func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -317,23 +430,57 @@ func (h *PesquisaHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Gerar caminho do QR Code baseado no link de acesso
-	qrCodePath := fmt.Sprintf("/qrcodes/%s.png", pesquisa.LinkAcesso)
-	
-	//Atualizar no banco
+	surveyURL := h.buildSurveyURL(r, pesquisa)
+	qrPayload := surveyURL
+
+	pngBytes, err := qrcode.Encode(qrPayload, qrcode.Medium, 256)
+	if err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro ao gerar QR Code", err.Error())
+		return
+	}
+
+	outputDir := strings.TrimSpace(os.Getenv("QRCODE_OUTPUT_DIR"))
+	if outputDir == "" {
+		outputDir = filepath.Join("uploads", "qrcodes")
+	}
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro ao preparar diretório de QR Code", err.Error())
+		return
+	}
+
+	fileName := fmt.Sprintf("%s.png", pesquisa.LinkAcesso)
+	filePath := filepath.Join(outputDir, fileName)
+	if err := os.WriteFile(filePath, pngBytes, 0o644); err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro ao salvar QR Code", err.Error())
+		return
+	}
+
+	publicBasePath := strings.TrimSpace(os.Getenv("QRCODE_PUBLIC_BASE_PATH"))
+	if publicBasePath == "" {
+		publicBasePath = "/uploads/qrcodes"
+	}
+	if !strings.HasPrefix(publicBasePath, "/") {
+		publicBasePath = "/" + publicBasePath
+	}
+	qrCodePath := strings.TrimRight(publicBasePath, "/") + "/" + fileName
+
+	// Atualizar no banco
 	pesquisa.QRCodePath = qrCodePath
-	
+
 	userAdminID := h.getUserAdminIDFromContext(r)
 	clientIP := h.getClientIP(r)
-	
+
 	if err := h.pesquisaUseCase.Update(r.Context(), pesquisa, userAdminID, clientIP); err != nil {
 		response.WriteError(w, http.StatusInternalServerError, "Erro ao salvar QR Code", err.Error())
 		return
 	}
 
 	qrResponse := map[string]string{
-		"qr_code_path": qrCodePath,
-		"link_acesso":  pesquisa.LinkAcesso,
+		"qr_code_path":   qrCodePath,
+		"link_acesso":    pesquisa.LinkAcesso,
+		"survey_url":     surveyURL,
+		"qr_payload":     qrPayload,
+		"qr_code_base64": base64.StdEncoding.EncodeToString(pngBytes),
 	}
 
 	response.WriteSuccess(w, http.StatusOK, "QR Code gerado com sucesso", qrResponse)
@@ -421,4 +568,17 @@ func (h *PesquisaHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/empresas/{empresa_id:[0-9]+}/pesquisas", h.ListPesquisasByEmpresa).Methods("GET")
 	router.HandleFunc("/empresas/{empresa_id:[0-9]+}/pesquisas/active", h.ListPesquisasActive).Methods("GET")
 	router.HandleFunc("/setores/{setor_id:[0-9]+}/pesquisas", h.ListPesquisasBySetor).Methods("GET")
+}
+
+func (h *PesquisaHandler) buildSurveyURL(r *http.Request, pesquisa *entity.Pesquisa) string {
+	baseURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if baseURL == "" {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		baseURL = fmt.Sprintf("%s://%s", scheme, r.Host)
+	}
+	baseURL = strings.TrimRight(baseURL, "/")
+	return fmt.Sprintf("%s/pesquisas/link/%s", baseURL, pesquisa.LinkAcesso)
 }

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"organizational-climate-survey/backend/pkg/logger"
+	"time"
 
 	_ "github.com/lib/pq" // Driver PostgreSQL
 )
@@ -28,9 +29,26 @@ type Config struct {
 
 // NewDB cria uma nova conexão com o banco de dados PostgreSQL
 // Retorna erro se a conexão falhar ou o banco estiver inacessível
-func NewDB(host, port, user, password, dbname string) (*DB, error) {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+func NewDB(
+	host, port, user, password, dbname, sslMode string,
+	maxOpenConns, maxIdleConns, connMaxLifetimeMins int,
+) (*DB, error) {
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	if maxOpenConns <= 0 {
+		maxOpenConns = 25
+	}
+	if maxIdleConns < 0 {
+		maxIdleConns = 5
+	}
+	if connMaxLifetimeMins <= 0 {
+		connMaxLifetimeMins = 5
+	}
+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslMode)
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
@@ -41,8 +59,12 @@ func NewDB(host, port, user, password, dbname string) (*DB, error) {
 		return nil, fmt.Errorf("erro ao fazer ping no banco: %v", err)
 	}
 
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(connMaxLifetimeMins) * time.Minute)
+
 	log := logger.New(nil)
-	log.Info("Conectado ao PostgreSQL")
+	log.Info("Conectado ao PostgreSQL com pool configurado")
 
 	return &DB{DB: db, logger: log}, nil
 }

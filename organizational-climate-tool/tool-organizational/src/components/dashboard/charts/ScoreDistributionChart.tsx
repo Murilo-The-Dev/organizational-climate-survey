@@ -34,7 +34,7 @@ export const ScoreDistributionChart = () => (
         Contagem de respostas para cada nota (1-5)
       </CardDescription>
     </CardHeader>
-    <CardContent className="h-full w-full p-4 overflow-x-auto overflow-y-hidden self-center">
+    <CardContent className="h-full w-full p-4 overflow-x-auto overflow-y-hidden self-center" style={{ overflow: 'hidden' }}> 
       <ChartContainer config={chartConfig} className="h-full min-w-[200px] w-full max-h-96">
         <BarChart 
           accessibilityLayer 

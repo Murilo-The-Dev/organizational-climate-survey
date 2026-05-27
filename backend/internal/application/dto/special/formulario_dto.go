@@ -8,14 +8,14 @@ import "organizational-climate-survey/backend/internal/domain/entity"
 // FormularioRespostaRequest é usado para enviar todas as respostas de uma pesquisa
 // de uma só vez, garantindo consistência no envio.
 type FormularioRespostaRequest struct {
-	IDPesquisa int                     `json:"id_pesquisa" binding:"required,gt=0"` // ID da pesquisa à qual as respostas pertencem
-	Respostas  []RespostaCreateRequest `json:"respostas" binding:"required,dive"`  // Lista de respostas a cada pergunta da pesquisa
+	IDPesquisa int                     `json:"id_pesquisa" binding:"required,gt=0" example:"10"` // ID da pesquisa à qual as respostas pertencem
+	Respostas  []RespostaCreateRequest `json:"respostas" binding:"required,dive"`                // Lista de respostas a cada pergunta da pesquisa
 }
 
 // RespostaCreateRequest representa o envio de uma única resposta de pergunta.
 type RespostaCreateRequest struct {
-	IDPergunta    int    `json:"id_pergunta" binding:"required,gt=0"`  // ID da pergunta
-	ValorResposta string `json:"valor_resposta" binding:"required,max=2000"` // Valor fornecido para a pergunta
+	IDPergunta    int    `json:"id_pergunta" binding:"required,gt=0" example:"15"`                         // ID da pergunta
+	ValorResposta string `json:"valor_resposta" binding:"required,max=2000" example:"Concordo totalmente"` // Valor fornecido para a pergunta
 }
 
 // ToEntity converte a requisição para a entidade de domínio correspondente.
@@ -28,14 +28,14 @@ func (r *RespostaCreateRequest) ToEntity() *entity.Resposta {
 
 // PerguntaBatchCreateRequest permite criar múltiplas perguntas em uma única requisição.
 type PerguntaBatchCreateRequest struct {
-	IDPesquisa int                     `json:"id_pesquisa" binding:"required,gt=0"` // ID da pesquisa
-	Perguntas  []PerguntaCreateRequest `json:"perguntas" binding:"required,dive"`   // Lista de perguntas a serem criadas
+	IDPesquisa int                     `json:"id_pesquisa" binding:"required,gt=0" example:"10"` // ID da pesquisa
+	Perguntas  []PerguntaCreateRequest `json:"perguntas" binding:"required,dive"`                // Lista de perguntas a serem criadas
 }
 
 // PerguntaCreateRequest define os dados necessários para criar uma única pergunta.
 type PerguntaCreateRequest struct {
-	TextoPergunta  string  `json:"texto_pergunta" binding:"required,min=5,max=500"` // Texto da pergunta
-	TipoPergunta   string  `json:"tipo_pergunta" binding:"required,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao"` // Tipo da pergunta
-	OrdemExibicao  int     `json:"ordem_exibicao" binding:"required,gte=1"` // Ordem de exibição na pesquisa
-	OpcoesResposta *string `json:"opcoes_resposta,omitempty"`               // Opções para perguntas de múltipla escolha
+	TextoPergunta  string  `json:"texto_pergunta" binding:"required,min=5,max=500" example:"Como você avalia sua liderança?"`                            // Texto da pergunta
+	TipoPergunta   string  `json:"tipo_pergunta" binding:"required,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao" example:"EscalaNumerica"` // Tipo da pergunta
+	OrdemExibicao  int     `json:"ordem_exibicao" binding:"required,gte=1" example:"1"`                                                                  // Ordem de exibição na pesquisa
+	OpcoesResposta *string `json:"opcoes_resposta,omitempty" example:"1,2,3,4,5"`                                                                        // Opções para perguntas de múltipla escolha
 }

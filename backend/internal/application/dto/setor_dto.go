@@ -12,16 +12,16 @@ import (
 // SetorCreateRequest representa os dados necessários para criar um novo setor
 // associado a uma empresa. Inclui validações de integridade e formato.
 type SetorCreateRequest struct {
-	IDEmpresa int    `json:"id_empresa" binding:"required,gt=0"`         // Identificador da empresa associada
-	NomeSetor string `json:"nome_setor" binding:"required,min=2,max=255"` // Nome do setor (obrigatório e limitado)
-	Descricao string `json:"descricao" binding:"max=500"`                 // Descrição opcional, com limite de tamanho
+	IDEmpresa int    `json:"id_empresa" binding:"required,gt=0" example:"1"`                                // Identificador da empresa associada
+	NomeSetor string `json:"nome_setor" binding:"required,min=2,max=255" example:"Recursos Humanos"`        // Nome do setor (obrigatório e limitado)
+	Descricao string `json:"descricao" binding:"max=500" example:"Setor responsável por gestão de pessoas"` // Descrição opcional, com limite de tamanho
 }
 
 // SetorUpdateRequest define os campos opcionais para atualização de um setor existente.
 // Usa ponteiros para diferenciar entre ausência de campo e valor vazio.
 type SetorUpdateRequest struct {
-	NomeSetor *string `json:"nome_setor,omitempty" binding:"omitempty,min=2,max=255"` // Novo nome do setor (opcional)
-	Descricao *string `json:"descricao,omitempty" binding:"omitempty,max=500"`        // Nova descrição (opcional)
+	NomeSetor *string `json:"nome_setor,omitempty" binding:"omitempty,min=2,max=255" example:"People Ops"`                      // Novo nome do setor (opcional)
+	Descricao *string `json:"descricao,omitempty" binding:"omitempty,max=500" example:"Área estratégica de gestão de talentos"` // Nova descrição (opcional)
 }
 
 // ToEntity converte o DTO de criação em uma entidade de domínio Setor,

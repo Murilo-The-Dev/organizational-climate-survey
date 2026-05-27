@@ -12,20 +12,20 @@ import (
 // PerguntaCreateRequest representa os dados necessários para criar uma nova pergunta
 // vinculada a uma pesquisa específica.
 type PerguntaCreateRequest struct {
-	IDPesquisa     int     `json:"id_pesquisa" binding:"required,gt=0"`                                                      // Identificador da pesquisa associada (obrigatório)
-	TextoPergunta  string  `json:"texto_pergunta" binding:"required,min=5,max=500"`                                          // Enunciado da pergunta (obrigatório)
-	TipoPergunta   string  `json:"tipo_pergunta" binding:"required,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao"` // Tipo da pergunta, restringido a opções válidas
-	OrdemExibicao  int     `json:"ordem_exibicao" binding:"required,gte=1"`                                                  // Posição de exibição da pergunta (obrigatório)
-	OpcoesResposta *string `json:"opcoes_resposta,omitempty"`                                                                // Opções disponíveis para múltipla escolha ou escala (opcional)
+	IDPesquisa     int     `json:"id_pesquisa" binding:"required,gt=0" example:"10"`                                                                     // Identificador da pesquisa associada (obrigatório)
+	TextoPergunta  string  `json:"texto_pergunta" binding:"required,min=5,max=500" example:"Como você avalia a comunicação interna?"`                    // Enunciado da pergunta (obrigatório)
+	TipoPergunta   string  `json:"tipo_pergunta" binding:"required,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao" example:"EscalaNumerica"` // Tipo da pergunta, restringido a opções válidas
+	OrdemExibicao  int     `json:"ordem_exibicao" binding:"required,gte=1" example:"1"`                                                                  // Posição de exibição da pergunta (obrigatório)
+	OpcoesResposta *string `json:"opcoes_resposta,omitempty" example:"1,2,3,4,5"`                                                                        // Opções disponíveis para múltipla escolha ou escala (opcional)
 }
 
 // PerguntaUpdateRequest representa os campos permitidos para atualização parcial
 // de uma pergunta existente.
 type PerguntaUpdateRequest struct {
-	TextoPergunta  *string `json:"texto_pergunta,omitempty" binding:"omitempty,min=5,max=500"`                                          // Novo texto da pergunta (opcional)
-	TipoPergunta   *string `json:"tipo_pergunta,omitempty" binding:"omitempty,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao"` // Novo tipo da pergunta (opcional)
-	OrdemExibicao  *int    `json:"ordem_exibicao,omitempty" binding:"omitempty,gte=1"`                                                  // Nova ordem de exibição (opcional)
-	OpcoesResposta *string `json:"opcoes_resposta,omitempty"`                                                                           // Novas opções de resposta (opcional)
+	TextoPergunta  *string `json:"texto_pergunta,omitempty" binding:"omitempty,min=5,max=500" example:"Você se sente reconhecido pelo trabalho?"`           // Novo texto da pergunta (opcional)
+	TipoPergunta   *string `json:"tipo_pergunta,omitempty" binding:"omitempty,oneof=MultiplaEscolha RespostaAberta EscalaNumerica SimNao" example:"SimNao"` // Novo tipo da pergunta (opcional)
+	OrdemExibicao  *int    `json:"ordem_exibicao,omitempty" binding:"omitempty,gte=1" example:"2"`                                                          // Nova ordem de exibição (opcional)
+	OpcoesResposta *string `json:"opcoes_resposta,omitempty" example:"Sim,Nao"`                                                                             // Novas opções de resposta (opcional)
 }
 
 // ToEntity converte a requisição de criação em uma entidade de domínio Pergunta,

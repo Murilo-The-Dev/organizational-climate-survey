@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"organizational-climate-survey/backend/internal/domain/entity"
 	"organizational-climate-survey/backend/internal/domain/repository"
+	"organizational-climate-survey/backend/pkg/logger"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var dashboardUseCaseLog = logger.New(nil)
 
 // DashboardUseCase implementa casos de uso para gerenciamento de dashboards
 type DashboardUseCase struct {
@@ -26,13 +29,32 @@ type DashboardUseCase struct {
 // NewDashboardUseCase cria uma nova instância do caso de uso de dashboards
 func NewDashboardUseCase(repo repository.DashboardRepository,
 	pesquisaRepo repository.PesquisaRepository,
+	perguntaRepo repository.PerguntaRepository,
+	respostaRepo repository.RespostaRepository,
 	empresaRepo repository.EmpresaRepository,
 	logRepo repository.LogAuditoriaRepository) *DashboardUseCase {
 	return &DashboardUseCase{
 		repo:             repo,
 		pesquisaRepo:     pesquisaRepo,
+		perguntaRepo:     perguntaRepo,
+		respostaRepo:     respostaRepo,
 		empresaRepo:      empresaRepo,
 		logAuditoriaRepo: logRepo,
+	}
+}
+
+func (uc *DashboardUseCase) writeAuditLog(ctx context.Context, entry *entity.LogAuditoria) {
+	if uc.logAuditoriaRepo == nil || entry == nil {
+		return
+	}
+
+	if err := uc.logAuditoriaRepo.Create(ctx, entry); err != nil {
+		dashboardUseCaseLog.WithFields(map[string]interface{}{
+			"acao":          entry.AcaoRealizada,
+			"user_admin_id": entry.IDUserAdmin,
+			"endereco_ip":   entry.EnderecoIP,
+			"erro":          err.Error(),
+		}).Warn("falha ao persistir log de auditoria de dashboard")
 	}
 }
 
@@ -97,7 +119,7 @@ func (uc *DashboardUseCase) Create(ctx context.Context, dashboard *entity.Dashbo
 			Detalhes:      fmt.Sprintf("Dashboard criado: %s para pesquisa '%s' (ID: %d)", dashboard.Titulo, pesquisa.Titulo, dashboard.ID),
 			EnderecoIP:    enderecoIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
 	return nil
@@ -189,7 +211,7 @@ func (uc *DashboardUseCase) Update(ctx context.Context, dashboard *entity.Dashbo
 			Detalhes:      fmt.Sprintf("Dashboard atualizado: %s -> %s da pesquisa '%s' (ID: %d)", existing.Titulo, dashboard.Titulo, pesquisa.Titulo, dashboard.ID),
 			EnderecoIP:    enderecoIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
 	return nil
@@ -228,7 +250,7 @@ func (uc *DashboardUseCase) UpdateConfig(ctx context.Context, dashboardID int, c
 			Detalhes:      fmt.Sprintf("Configuração atualizada do dashboard: %s (ID: %d)", dashboard.Titulo, dashboard.ID),
 			EnderecoIP:    enderecoIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
 	return nil
@@ -270,7 +292,7 @@ func (uc *DashboardUseCase) Delete(ctx context.Context, id int, userAdminID int,
 			Detalhes:      fmt.Sprintf("Dashboard deletado: %s da pesquisa '%s' (ID: %d)", dashboard.Titulo, pesquisa.Titulo, dashboard.ID),
 			EnderecoIP:    enderecoIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
 	return nil
@@ -317,15 +339,14 @@ func (uc *DashboardUseCase) GenerateReport(ctx context.Context, dashboardID int,
 			Detalhes:      fmt.Sprintf("Relatório gerado (%s) do dashboard: %s (ID: %d)", format, dashboard.Titulo, dashboard.ID),
 			EnderecoIP:    enderecoIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
-	// Aqui seria implementada a lógica de geração do relatório
-	// Por enquanto, retorna dados simulados
-	reportContent := fmt.Sprintf("Relatório do Dashboard: %s\nFormato: %s\nPesquisa: %s\nGerado em: %s",
-		dashboard.Titulo, format, pesquisa.Titulo, time.Now().Format("2006-01-02 15:04:05"))
+	if uc.perguntaRepo == nil || uc.respostaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
+	}
 
-	return []byte(reportContent), nil
+	return uc.generateDashboardReport(ctx, dashboard, pesquisa, format)
 }
 
 // GetDashboardData obtém dados processados do dashboard
@@ -334,6 +355,9 @@ func (uc *DashboardUseCase) GetDashboardData(ctx context.Context, dashboardID in
 	dashboard, err := uc.repo.GetByID(ctx, dashboardID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard não encontrado: %v", err)
+	}
+	if uc.respostaRepo == nil || uc.perguntaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
 	}
 
 	// Usar método que existe para buscar dados agregados
@@ -373,13 +397,13 @@ func (uc *DashboardUseCase) GetDashboardData(ctx context.Context, dashboardID in
 
 // Função auxiliar para processar dados agregados
 func processarDadosAgregados(tipoPergunta string, dadosAgregados map[string]int) map[string]interface{} {
-	switch tipoPergunta {
-	case "Multipla Escolha":
+	switch normalizePerguntaTipo(tipoPergunta) {
+	case "multiplaescolha":
 		return map[string]interface{}{
 			"tipo":         "multipla_escolha",
 			"distribuicao": dadosAgregados,
 		}
-	case "Escala Numerica":
+	case "escalanumerica":
 		return processarEscalaAgregada(dadosAgregados)
 	default:
 		return map[string]interface{}{
@@ -387,6 +411,13 @@ func processarDadosAgregados(tipoPergunta string, dadosAgregados map[string]int)
 			"dados": dadosAgregados,
 		}
 	}
+}
+
+func normalizePerguntaTipo(raw string) string {
+	normalized := strings.ToLower(strings.TrimSpace(raw))
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	normalized = strings.ReplaceAll(normalized, "_", "")
+	return normalized
 }
 
 func processarEscalaAgregada(dados map[string]int) map[string]interface{} {
@@ -398,7 +429,10 @@ func processarEscalaAgregada(dados map[string]int) map[string]interface{} {
 		}
 	}
 
-	media := float64(soma) / float64(total)
+	media := 0.0
+	if total > 0 {
+		media = float64(soma) / float64(total)
+	}
 
 	return map[string]interface{}{
 		"tipo":            "escala",
@@ -444,7 +478,10 @@ func processarEscala(respostas []*entity.Resposta) map[string]interface{} {
 		}
 	}
 
-	media := soma / float64(len(valores))
+	media := 0.0
+	if len(valores) > 0 {
+		media = soma / float64(len(valores))
+	}
 
 	return map[string]interface{}{
 		"tipo":            "escala",
@@ -500,7 +537,7 @@ func (uc *DashboardUseCase) RefreshDashboard(ctx context.Context, dashboardID, u
 			Detalhes:      fmt.Sprintf("Dashboard atualizado: %s (ID: %d)", dashboard.Titulo, dashboard.ID),
 			EnderecoIP:    clientIP,
 		}
-		uc.logAuditoriaRepo.Create(ctx, log)
+		uc.writeAuditLog(ctx, log)
 	}
 
 	return nil
@@ -517,6 +554,9 @@ func (uc *DashboardUseCase) GetDashboardMetrics(ctx context.Context, dashboardID
 	dashboard, err := uc.repo.GetByID(ctx, dashboardID)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard não encontrado: %v", err)
+	}
+	if uc.respostaRepo == nil || uc.perguntaRepo == nil {
+		return nil, fmt.Errorf("dependências de perguntas/respostas não inicializadas")
 	}
 
 	// Buscar dados reais usando métodos corretos

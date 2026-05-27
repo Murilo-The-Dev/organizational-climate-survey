@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	appResponse "organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/application/handler"
 	"organizational-climate-survey/backend/internal/application/middleware"
 	"organizational-climate-survey/backend/internal/domain/repository"
@@ -15,6 +16,7 @@ import (
 	"organizational-climate-survey/backend/pkg/validator"
 
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // RouterConfig contém todas as dependências necessárias para configurar as rotas
@@ -30,7 +32,7 @@ type RouterConfig struct {
 	LogAuditoriaUseCase         *usecase.LogAuditoriaUseCase         // Use case de log
 	PesquisaRepo                repository.PesquisaRepository        // Repositório de pesquisa (NOVO - para middleware)
 	JWTSecret                   string                               // Chave secreta para JWT
-	BootstrapUseCase            *usecase.BootstrapUseCase    	// Use case de bootstrap
+	BootstrapUseCase            *usecase.BootstrapUseCase            // Use case de bootstrap
 }
 
 // SetupRouter configura todas as rotas da API com seus respectivos handlers
@@ -83,7 +85,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 
 	var bootstrapHandler *handler.BootstrapHandler
 	if config.BootstrapUseCase != nil {
-    bootstrapHandler = handler.NewBootstrapHandler(config.BootstrapUseCase, log, val)
+		bootstrapHandler = handler.NewBootstrapHandler(config.BootstrapUseCase, log, val)
 	}
 
 	var dashboardHandler *handler.DashboardHandler
@@ -103,7 +105,7 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	publicRoutes.Use(middleware.PublicMiddlewares())
 
 	// Auth (login)
-	authHandler.RegisterRoutes(publicRoutes)
+	authHandler.RegisterPublicRoutes(publicRoutes)
 
 	// NOVO: Bootstrap (criar primeiro admin)
 	if bootstrapHandler != nil {
@@ -112,14 +114,14 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 
 	// NOVO: Gerar token de acesso à pesquisa
 	if submissaoHandler != nil {
-		submissaoHandler.RegisterRoutes(publicRoutes)
+		submissaoHandler.RegisterPublicRoutes(publicRoutes)
 	}
 
 	// === ROTAS DE SUBMISSÃO DE RESPOSTAS (anônimas com token) ===
 	if respostaHandler != nil && config.PesquisaRepo != nil {
 		surveyRoutes := api.PathPrefix("").Subrouter()
 		surveyRoutes.Use(middleware.SurveySubmissionMiddlewares(config.PesquisaRepo)) // Passa repo
-		surveyRoutes.HandleFunc("/respostas/submit", respostaHandler.SubmitRespostas).Methods("POST")
+		respostaHandler.RegisterPublicRoutes(surveyRoutes)
 	}
 
 	// === ROTAS AUTENTICADAS (requerem JWT) ===
@@ -144,6 +146,10 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	if dashboardHandler != nil {
 		dashboardHandler.RegisterRoutes(authRoutes)
 	}
+	authHandler.RegisterProtectedRoutes(authRoutes)
+	if submissaoHandler != nil {
+		submissaoHandler.RegisterProtectedRoutes(authRoutes)
+	}
 
 	// === ROTAS ADMINISTRATIVAS (requerem JWT + permissões admin) ===
 	adminRoutes := api.PathPrefix("").Subrouter()
@@ -157,46 +163,31 @@ func SetupRouter(config *RouterConfig) *mux.Router {
 	if respostaHandler != nil {
 		respostaAdminRoutes := api.PathPrefix("").Subrouter()
 		respostaAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
-
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/stats", respostaHandler.GetRespostaStats).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/aggregated", respostaHandler.GetRespostasByPesquisa).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/by-date", respostaHandler.GetRespostasByDateRange).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas/count", respostaHandler.CountRespostasByPesquisa).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/respostas", respostaHandler.DeleteRespostasByPesquisa).Methods("DELETE")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/aggregated", respostaHandler.GetRespostasByPergunta).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/count", respostaHandler.CountRespostasByPergunta).Methods("GET")
-		respostaAdminRoutes.HandleFunc("/perguntas/{pergunta_id:[0-9]+}/respostas/stats", respostaHandler.GetStatsByPergunta).Methods("GET")
-	}
-
-	// NOVO: Estatísticas de submissão (admin)
-	if submissaoHandler != nil {
-		submissaoAdminRoutes := api.PathPrefix("").Subrouter()
-		submissaoAdminRoutes.Use(middleware.AuthenticatedMiddlewares([]byte(config.JWTSecret)))
-		submissaoAdminRoutes.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/submissions/stats", submissaoHandler.GetSubmissionStats).Methods("GET")
+		respostaHandler.RegisterProtectedRoutes(respostaAdminRoutes)
 	}
 
 	// Health check e documentação
 	router.HandleFunc("/health", HealthCheckHandler).Methods("GET")
+	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	router.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("./docs/"))))
 
 	return router
 }
 
 // HealthCheckHandler responde às requisições de verificação de saúde da API
+// @Summary Health check da API
+// @Description Retorna status de disponibilidade e metadados básicos da API.
+// @Tags system
+// @Produce json
+// @Success 200 {object} appResponse.APIResponse
+// @Router /health [get]
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-
-	response := `{
-		"status": "ok",
-		"message": "API está funcionando",
-		"version": "1.0.0",
-		"timestamp": "` + timestamp + `"
-	}`
-
-	w.Write([]byte(response))
+	appResponse.WriteSuccess(w, http.StatusOK, "API está funcionando", map[string]interface{}{
+		"status":    "ok",
+		"version":   "1.0.0",
+		"timestamp": timestamp,
+	})
 }
 
 // SetupCORSRouter configura o router com middleware CORS habilitado
@@ -225,7 +216,7 @@ func SetupMinimalRouter(config *RouterConfig) *mux.Router {
 		)
 
 		api := router.PathPrefix("/api/v1").Subrouter()
-		authHandler.RegisterRoutes(api)
+		authHandler.RegisterPublicRoutes(api)
 	}
 
 	return router

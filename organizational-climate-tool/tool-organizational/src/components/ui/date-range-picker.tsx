@@ -1,18 +1,18 @@
 import * as React from "react";
 import { CalendarIcon } from "lucide-react";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {Calendar, CalendarProps } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface DateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+interface DateRangePickerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   date?: DateRange;
   onSelect?: (date: DateRange | undefined) => void;
 }
@@ -23,13 +23,8 @@ export function DateRangePicker({
   onSelect,
   ...props
 }: DateRangePickerProps) {
-  const [selectedDate, setSelectedDate] = React.useState<DateRange | undefined>(date);
-
-  React.useEffect(() => {
-    if (onSelect) {
-      onSelect(selectedDate);
-    }
-  }, [selectedDate, onSelect]);
+  // Componente totalmente controlado pelo pai (ReportFilterModal)
+  // Removendo o estado interno e o useEffect que causava o loop.
 
   return (
     <div className={cn("grid gap-2", className)} {...props}>
@@ -39,19 +34,22 @@ export function DateRangePicker({
             id="date"
             variant="outline"
             className={cn(
-              "w-[300px] justify-start text-left font-normal",
-              !selectedDate && "text-muted-foreground"
+              "w-full justify-start text-left font-normal",
+              !date && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {selectedDate?.from ? (
-              selectedDate.to ? (
-                <>{format(selectedDate.from, "LLL dd, y")}</>
+            {date?.from ? (
+              date.to ? (
+                <>
+                  {format(date.from, "LLL dd, y")} -{" "}
+                  {format(date.to, "LLL dd, y")}
+                </>
               ) : (
-                format(selectedDate.from, "LLL dd, y")
+                format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Selecione uma data</span>
+              <span>Selecione um intervalo de datas</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -59,9 +57,9 @@ export function DateRangePicker({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={selectedDate?.from}
-            selected={selectedDate}
-            onSelect={setSelectedDate}
+            defaultMonth={date?.from}
+            selected={date}
+            onSelect={onSelect}
             numberOfMonths={2}
           />
         </PopoverContent>
@@ -69,4 +67,3 @@ export function DateRangePicker({
     </div>
   );
 }
-

@@ -5,14 +5,14 @@ package handler
 
 import (
 	"encoding/json"
-	"net/http"
-	"strconv"
-	"strings"
 	"fmt"
+	"net/http"
 	"organizational-climate-survey/backend/internal/application/dto"
 	"organizational-climate-survey/backend/internal/application/dto/response"
 	"organizational-climate-survey/backend/internal/domain/usecase"
 	"organizational-climate-survey/backend/pkg/logger"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -32,6 +32,17 @@ func NewDashboardHandler(dashboardUseCase *usecase.DashboardUseCase, log logger.
 }
 
 // CreateDashboard cria um novo dashboard no sistema
+// @Summary Criar dashboard
+// @Tags dashboards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body dto.DashboardCreateRequest true "Dados do dashboard"
+// @Success 201 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 409 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards [post]
 func (h *DashboardHandler) CreateDashboard(w http.ResponseWriter, r *http.Request) {
 	var req dto.DashboardCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -70,6 +81,16 @@ func (h *DashboardHandler) CreateDashboard(w http.ResponseWriter, r *http.Reques
 }
 
 // GetDashboard retorna um dashboard específico pelo ID
+// @Summary Buscar dashboard por ID
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id} [get]
 func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -93,6 +114,16 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 }
 
 // GetDashboardByPesquisa retorna o dashboard vinculado a uma pesquisa específica
+// @Summary Buscar dashboard por pesquisa
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/dashboard [get]
 func (h *DashboardHandler) GetDashboardByPesquisa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
@@ -115,6 +146,16 @@ func (h *DashboardHandler) GetDashboardByPesquisa(w http.ResponseWriter, r *http
 }
 
 // ListDashboardsByEmpresa lista todos os dashboards associados a uma empresa
+// @Summary Listar dashboards por empresa
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param empresa_id path int true "ID da empresa"
+// @Param setor_id query int false "ID do setor para filtro"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/empresas/{empresa_id}/dashboards [get]
 func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	empresaID, err := strconv.Atoi(vars["empresa_id"])
@@ -123,7 +164,17 @@ func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *htt
 		return
 	}
 
-	dashboards, err := h.dashboardUseCase.ListByEmpresa(r.Context(), empresaID)
+	var setorID *int
+	if rawSetorID := strings.TrimSpace(r.URL.Query().Get("setor_id")); rawSetorID != "" {
+		parsedSetorID, convErr := strconv.Atoi(rawSetorID)
+		if convErr != nil {
+			response.WriteError(w, http.StatusBadRequest, "ID do setor inválido", "setor_id deve ser um número inteiro")
+			return
+		}
+		setorID = &parsedSetorID
+	}
+
+	dashboards, err := h.dashboardUseCase.ListByEmpresaWithSetor(r.Context(), empresaID, setorID)
 	if err != nil {
 		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
 		return
@@ -138,7 +189,62 @@ func (h *DashboardHandler) ListDashboardsByEmpresa(w http.ResponseWriter, r *htt
 	response.WriteSuccess(w, http.StatusOK, "Dashboards listados com sucesso", dashboardsResponse)
 }
 
+// GetHistoricalComparison retorna comparação histórica da pesquisa, com filtro opcional de setor.
+// @Summary Obter comparativo histórico da pesquisa
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Param setor_id query int false "ID do setor para filtro"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/comparativo [get]
+func (h *DashboardHandler) GetHistoricalComparison(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "ID da pesquisa inválido", "ID deve ser um número inteiro")
+		return
+	}
+
+	var setorID *int
+	if rawSetorID := strings.TrimSpace(r.URL.Query().Get("setor_id")); rawSetorID != "" {
+		parsedSetorID, convErr := strconv.Atoi(rawSetorID)
+		if convErr != nil {
+			response.WriteError(w, http.StatusBadRequest, "ID do setor inválido", "setor_id deve ser um número inteiro")
+			return
+		}
+		setorID = &parsedSetorID
+	}
+
+	data, err := h.dashboardUseCase.GetHistoricalComparison(r.Context(), pesquisaID, setorID)
+	if err != nil {
+		if strings.Contains(err.Error(), "não encontrada") {
+			response.WriteError(w, http.StatusNotFound, "Pesquisa não encontrada", err.Error())
+			return
+		}
+		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
+		return
+	}
+
+	response.WriteSuccess(w, http.StatusOK, "Comparativo histórico gerado com sucesso", data)
+}
+
 // UpdateDashboard atualiza dados de um dashboard existente
+// @Summary Atualizar dashboard
+// @Tags dashboards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Param body body dto.DashboardUpdateRequest true "Dados para atualização"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id} [put]
 func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -179,6 +285,16 @@ func (h *DashboardHandler) UpdateDashboard(w http.ResponseWriter, r *http.Reques
 }
 
 // DeleteDashboard remove um dashboard do sistema
+// @Summary Remover dashboard
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id} [delete]
 func (h *DashboardHandler) DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -203,6 +319,17 @@ func (h *DashboardHandler) DeleteDashboard(w http.ResponseWriter, r *http.Reques
 }
 
 // GetDashboardData retorna dados e métricas processadas do dashboard
+// @Summary Obter dados processados do dashboard
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Param filters query string false "Filtros serializados"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id}/data [get]
 func (h *DashboardHandler) GetDashboardData(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -227,6 +354,16 @@ func (h *DashboardHandler) GetDashboardData(w http.ResponseWriter, r *http.Reque
 }
 
 // RefreshDashboard força atualização dos dados e métricas de um dashboard
+// @Summary Atualizar dados do dashboard
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id}/refresh [post]
 func (h *DashboardHandler) RefreshDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -251,6 +388,19 @@ func (h *DashboardHandler) RefreshDashboard(w http.ResponseWriter, r *http.Reque
 }
 
 // ExportDashboard exporta o dashboard em PDF, Excel ou CSV
+// @Summary Exportar dashboard
+// @Tags dashboards
+// @Produce application/pdf
+// @Produce text/csv
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Param format query string false "Formato do arquivo" Enums(pdf,xlsx,csv) default(pdf)
+// @Success 200 {file} file
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id}/export [get]
 func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -265,7 +415,7 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 	}
 
 	if !h.isValidExportFormat(format) {
-		response.WriteError(w, http.StatusBadRequest, "Formato inválido", "Formato deve ser: pdf ou excel")
+		response.WriteError(w, http.StatusBadRequest, "Formato inválido", "Formato deve ser: pdf, xlsx ou csv")
 		return
 	}
 
@@ -296,10 +446,89 @@ func (h *DashboardHandler) ExportDashboard(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(exportData)
+	if _, err := w.Write(exportData); err != nil {
+		h.log.WithContext(r.Context()).Error("falha ao escrever resposta de exportação do dashboard: %v", err)
+	}
+}
+
+// ExportPesquisa exporta dados analíticos a partir do ID da pesquisa.
+// @Summary Exportar relatório da pesquisa
+// @Tags dashboards
+// @Produce application/pdf
+// @Produce text/csv
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security BearerAuth
+// @Param pesquisa_id path int true "ID da pesquisa"
+// @Param format query string false "Formato do arquivo" Enums(pdf,xlsx,csv) default(pdf)
+// @Success 200 {file} file
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/pesquisas/{pesquisa_id}/export [get]
+func (h *DashboardHandler) ExportPesquisa(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	pesquisaID, err := strconv.Atoi(vars["pesquisa_id"])
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "ID inválido", "ID da pesquisa deve ser um número inteiro")
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "pdf"
+	}
+	if !h.isValidExportFormat(format) {
+		response.WriteError(w, http.StatusBadRequest, "Formato inválido", "Formato deve ser: pdf, xlsx ou csv")
+		return
+	}
+
+	dashboard, err := h.dashboardUseCase.GetByPesquisaID(r.Context(), pesquisaID)
+	if err != nil {
+		if strings.Contains(err.Error(), "não encontrado") {
+			response.WriteError(w, http.StatusNotFound, "Dashboard da pesquisa não encontrado", err.Error())
+			return
+		}
+		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
+		return
+	}
+
+	userAdminID := h.getUserAdminIDFromContext(r)
+	clientIP := h.getClientIP(r)
+	exportData, err := h.dashboardUseCase.GenerateReport(r.Context(), dashboard.ID, format, userAdminID, clientIP)
+	if err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "Erro interno", err.Error())
+		return
+	}
+
+	switch format {
+	case "pdf":
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=pesquisa_%d.pdf", pesquisaID))
+	case "xlsx":
+		w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=pesquisa_%d.xlsx", pesquisaID))
+	case "csv":
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=pesquisa_%d.csv", pesquisaID))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(exportData); err != nil {
+		h.log.WithContext(r.Context()).Error("falha ao escrever resposta de exportação da pesquisa: %v", err)
+	}
 }
 
 // GetDashboardMetrics retorna métricas resumidas de um dashboard
+// @Summary Obter métricas resumidas do dashboard
+// @Tags dashboards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID do dashboard"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /api/v1/dashboards/{id}/metrics [get]
 func (h *DashboardHandler) GetDashboardMetrics(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -380,6 +609,8 @@ func (h *DashboardHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/dashboards/{id:[0-9]+}/refresh", h.RefreshDashboard).Methods("POST")
 	router.HandleFunc("/dashboards/{id:[0-9]+}/export", h.ExportDashboard).Methods("GET")
 	router.HandleFunc("/dashboards/{id:[0-9]+}/metrics", h.GetDashboardMetrics).Methods("GET")
+	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/comparativo", h.GetHistoricalComparison).Methods("GET")
+	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/export", h.ExportPesquisa).Methods("GET")
 	router.HandleFunc("/pesquisas/{pesquisa_id:[0-9]+}/dashboard", h.GetDashboardByPesquisa).Methods("GET")
 	router.HandleFunc("/empresas/{empresa_id:[0-9]+}/dashboards", h.ListDashboardsByEmpresa).Methods("GET")
 }
