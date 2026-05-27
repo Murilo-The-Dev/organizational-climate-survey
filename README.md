@@ -5,10 +5,13 @@
 ![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow)
 ![Versão](https://img.shields.io/badge/Versão-1.0-blue)
 ![Licença](https://img.shields.io/badge/Licença-Acadêmico-green)
+![Go](https://img.shields.io/badge/Go-1.23.5-00ADD8?logo=go)
+![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black?logo=next.js)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?logo=postgresql)
 
 **Sistema completo para coleta, análise e gestão de pesquisas de clima organizacional com garantia de anonimato e conformidade com a LGPD**
 
-[📋 Documentação Completa](docs/) • [🚀 Demo](#) • [📊 Roadmap](#roadmap) • [🤝 Contribuir](#contribuindo)
+[📋 Sobre](#-sobre-o-projeto) • [🏗️ Arquitetura](#️-arquitetura-técnica) • [🚀 Instalação](#-instalação-e-configuração) • [📊 Roadmap](#-roadmap)
 
 </div>
 
@@ -17,83 +20,208 @@
 ## 📖 Sobre o Projeto
 
 Este sistema foi desenvolvido como **projeto de extensão curricular** pelos alunos:
-- **Murilo do Amaral Christofoletti** (8204209) - Backend
-- **Alexandre Ricardo Calore** (8205280) - Frontend  
-- **Geovanni Adrian de Oliveira Muniz** (8203566) - Database
-- **Guilherme Rodrigues da Conceição** (8183961) - Frontend
+
+| Nome | RA | Responsabilidade |
+|------|----|-----------------|
+| **Murilo do Amaral Christofoletti** | 8204209 | Backend |
+| **Alexandre Ricardo Calore** | 8205280 | Frontend |
+| **Geovanni Adrian de Oliveira Muniz** | 8203566 | Database |
+| **Guilherme Rodrigues da Conceição** | 8183961 | Frontend |
 
 ### 🎯 Objetivo
+
 Oferecer uma solução abrangente para empresas realizarem pesquisas internas de clima organizacional, priorizando:
-- **🔒 Anonimato completo** dos respondentes
-- **📊 Análises segmentadas** por departamentos
+
+- **🔒 Anonimato completo** dos respondentes via hash de IP/fingerprint
+- **📊 Análises segmentadas** por departamentos e setores
 - **📈 Comparações históricas** de resultados
-- **🔄 Automação** de processos recorrentes
-- **⚖️ Conformidade** com LGPD e regulamentações
+- **🔄 Agendamento** de pesquisas recorrentes
+- **⚖️ Conformidade** com LGPD e regulamentações brasileiras
 
 ---
 
 ## ✨ Funcionalidades Principais
 
-### 👨‍💼 Para Administradores
-- ✅ **Criação de pesquisas** com formulários customizáveis
-- ✅ **Gestão de empresas** e setores organizacionais  
-- ✅ **Geração automática** de links e QR Codes
-- ✅ **Agendamento** de pesquisas recorrentes
-- ✅ **Dashboards interativos** com métricas em tempo real
-- ✅ **Exportação** de relatórios (Excel, PDF, CSV)
-- ✅ **Auditoria completa** de ações no sistema
+### 👨‍💼 Para Administradores (Ferramenta)
+- ✅ **Criação e gestão de pesquisas** com perguntas customizáveis
+- ✅ **Gestão de empresas** e setores organizacionais
+- ✅ **Gestão de usuários** administradores por empresa
+- ✅ **Geração de links e QR Codes** para compartilhamento
+- ✅ **Dashboards interativos** com múltiplos tipos de gráfico
+- ✅ **Exportação de relatórios** em PDF
+- ✅ **Logs de auditoria** completos de ações administrativas
+- ✅ **Visualização de resultados** por pesquisa e setor
 
 ### 👥 Para Respondentes (Colaboradores)
-- ✅ **Acesso anônimo** via link ou QR Code
+- ✅ **Acesso anônimo** via link ou QR Code, sem necessidade de cadastro
 - ✅ **Interface responsiva** para qualquer dispositivo
-- ✅ **Múltiplos tipos de pergunta** (múltipla escolha, escala Likert, texto livre)
-- ✅ **Proteção contra** múltiplas submissões
-- ✅ **Experiência intuitiva** sem necessidade de cadastro
+- ✅ **Proteção contra múltiplas submissões** via hash anônimo
+- ✅ **Múltiplos tipos de pergunta** suportados
 
-### 🏢 Para Empresas
-- ✅ **Análise segmentada** por setores e equipes
-- ✅ **Comparações históricas** de indicadores
-- ✅ **Insights acionáveis** para tomada de decisão
-- ✅ **Conformidade total** com LGPD
+### 🌐 Landing Page
+- ✅ **Página institucional** apresentando o sistema
+- ✅ **Design responsivo** com Tailwind CSS
 
 ---
 
 ## 🏗️ Arquitetura Técnica
 
 ### Stack Tecnológica
+
 ```
-Frontend        Backend         Database        Deploy
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│  Next.js 14 │ │   Go 1.21+  │ │  MySQL 8.0  │ │   Docker    │
-│ TypeScript  │ │     Gin     │ │    GORM     │ │  Railway    │
-│  Tailwind   │ │     JWT     │ │   Redis*    │ │   Vercel    │
-│   Recharts  │ │   Swagger   │ │  Migrations │ │     CI/CD   │
-└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+Backend              Frontend (Ferramenta)   Frontend (Landing Page)   Database
+┌──────────────────┐ ┌────────────────────┐  ┌──────────────────────┐  ┌──────────────┐
+│  Go 1.23.5       │ │  Next.js 15.5.2    │  │  Next.js 15.5.2      │  │ PostgreSQL   │
+│  gorilla/mux     │ │  React 19          │  │  React 19            │  │              │
+│  golang-jwt/v5   │ │  TypeScript 5      │  │  TypeScript 5        │  │ Migrações    │
+│  lib/pq          │ │  Tailwind CSS v4   │  │  Tailwind CSS v4     │  │ SQL puras    │
+│  godotenv        │ │  Radix UI          │  │                      │  │ (psql)       │
+│  google/uuid     │ │  shadcn/ui         │  │                      │  │              │
+│  bcrypt          │ │  Recharts          │  │                      │  │              │
+│  SQL puro        │ │  React Hook Form   │  │                      │  │              │
+│                  │ │  Zod               │  │                      │  │              │
+│                  │ │  TanStack Table    │  │                      │  │              │
+│                  │ │  Axios + nookies   │  │                      │  │              │
+│                  │ │  jsPDF + html2canvas│  │                      │  │              │
+│                  │ │  react-qr-code     │  │                      │  │              │
+│                  │ │  Sonner (toasts)   │  │                      │  │              │
+│                  │ │  next-themes       │  │                      │  │              │
+│                  │ │  lucide-react      │  │                      │  │              │
+└──────────────────┘ └────────────────────┘  └──────────────────────┘  └──────────────┘
 ```
 
-### Arquitetura de Sistema
+### Arquitetura do Backend — Clean Architecture
+
+O backend segue os princípios da **Clean Architecture** com separação clara de responsabilidades:
+
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │    Database     │
-│   (Next.js)     │    │   (Golang)      │    │    (MySQL)      │
-│                 │    │                 │    │                 │
-│ • Dashboard     │◄──►│ • REST API      │◄──►│ • Pesquisas     │
-│ • Formulários   │    │ • JWT Auth      │    │ • Respostas     │
-│ • Gráficos      │    │ • Middleware    │    │ • Usuários      │
-│ • Relatórios    │    │ • QR Codes      │    │ • Auditoria     │
-│                 │    │ • Cron Jobs     │    │ • Views         │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-        │                       │                       │
-        └───────────────────────┼───────────────────────┘
-                               │
-                    ┌─────────────────┐
-                    │     Cache       │
-                    │    (Redis)      │
-                    │                 │
-                    │ • Sessões       │
-                    │ • Rate Limit    │
-                    │ • Dashboard     │
-                    └─────────────────┘
+┌──────────────────────────────────────────────────┐
+│                  HTTP Request                    │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│         Middleware (Auth JWT, CORS, Logger)       │
+│              internal/application/middleware      │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│            Handler + DTO Validation               │
+│              internal/application/handler         │
+│              internal/application/dto             │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│              Use Case (regras de negócio)         │
+│              internal/domain/usecase              │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│      Repository Interface  ←→  Entity             │
+│      internal/domain/repository                   │
+│      internal/domain/entity                       │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│        Repository Implementation (SQL puro)       │
+│        internal/infrastructure/postgres           │
+└────────────────────────┬─────────────────────────┘
+                         ▼
+┌──────────────────────────────────────────────────┐
+│                  PostgreSQL                       │
+└──────────────────────────────────────────────────┘
+```
+
+### Entidades do Domínio
+
+| Entidade | Descrição |
+|----------|-----------|
+| `Empresa` | Empresa cadastrada no sistema |
+| `Setor` | Setor/departamento dentro de uma empresa |
+| `UsuarioAdministrador` | Admin vinculado a uma empresa |
+| `Pesquisa` | Pesquisa de clima com período e status |
+| `Pergunta` | Pergunta dentro de uma pesquisa |
+| `SubmissaoPesquisa` | Registro anônimo de submissão (anti-duplicate) |
+| `Resposta` | Resposta individual a uma pergunta |
+| `LogAuditoria` | Log de ações administrativas |
+| `Dashboard` | Agregações e métricas calculadas |
+
+---
+
+## 📁 Estrutura do Repositório
+
+```
+organizational-climate-survey/
+│
+├── backend/                              # API REST em Go
+│   ├── cmd/api/
+│   │   └── main.go                       # Entry point
+│   ├── config/
+│   │   └── config.go                     # Carregamento de variáveis de ambiente
+│   ├── internal/
+│   │   ├── application/
+│   │   │   ├── dto/                      # Data Transfer Objects
+│   │   │   ├── handler/                  # HTTP handlers (um por entidade)
+│   │   │   └── middleware/               # Auth JWT, CORS, Logger
+│   │   ├── domain/
+│   │   │   ├── entity/                   # Entidades de negócio
+│   │   │   ├── repository/               # Interfaces de repositório
+│   │   │   └── usecase/                  # Casos de uso
+│   │   └── infrastructure/
+│   │       ├── auth/                     # JWT e bcrypt
+│   │       ├── http/                     # Servidor HTTP e roteamento (gorilla/mux)
+│   │       └── postgres/                 # Implementações SQL puras dos repositórios
+│   ├── migrations/                       # Arquivos SQL versionados
+│   │   ├── 000_setup_migrations.sql      # Tabela de controle de migrações
+│   │   ├── 001_initial_state.sql         # Schema principal
+│   │   ├── 002_adding_procedures_and_triggers.sql
+│   │   ├── 003_adding_views_for_reports.sql
+│   │   ├── 004_add_submissao_pesquisa.sql
+│   │   ├── 005_alter_resposta_add_submissao.sql
+│   │   ├── 006_feat_add_submissao_signals.sql
+│   │   └── 007_fix_resposta.sql
+│   ├── pkg/
+│   │   ├── crypto/                       # Serviço de criptografia e hash
+│   │   ├── logger/                       # Logger estruturado
+│   │   └── validator/                    # Utilitários de validação
+│   ├── migrate.sh                        # Script de gerenciamento de migrações
+│   ├── .env                              # Variáveis de ambiente (não versionado)
+│   ├── go.mod
+│   └── go.sum
+│
+├── organizational-climate-tool/          # Frontend — Ferramenta Administrativa
+│   └── tool-organizational/
+│       └── src/
+│           ├── app/
+│           │   ├── (app)/                # Rotas protegidas (requer autenticação)
+│           │   │   ├── dashboard/        # Dashboard principal
+│           │   │   ├── pesquisas/        # Listagem e gestão de pesquisas
+│           │   │   ├── empresas/         # Gestão de empresas
+│           │   │   ├── usuarios/         # Gestão de usuários administradores
+│           │   │   ├── resultados/       # Resultados e analytics
+│           │   │   ├── auditoria/        # Log de auditoria
+│           │   │   └── configuracoes/    # Configurações do sistema
+│           │   ├── login/                # Página pública de login
+│           │   └── pesquisas/[id]/       # Página pública de resposta à pesquisa
+│           │       └── responder/
+│           ├── components/
+│           │   ├── dashboard/            # StatCard, DataTable, ResultsDataTable
+│           │   │   └── charts/           # BarChart, LineChart, PieChart, RadialChart,
+│           │   │                         # StackedChart, EngagementChart, NpsBreakdown, etc.
+│           │   ├── forms/                # Formulários reutilizáveis
+│           │   ├── layout/               # Componentes de layout (sidebar, header)
+│           │   ├── modals/               # SurveyDetailsModal, SurveyLinkModal (QR Code)
+│           │   ├── pesquisas/            # SurveyCard, SurveyOverviewTab, SurveyQuestionsTab
+│           │   └── ui/                   # Componentes base (shadcn/ui)
+│           ├── context/
+│           │   └── AuthContext.tsx       # Contexto de autenticação (JWT via cookies)
+│           └── lib/
+│               ├── api.ts                # Cliente Axios com interceptor de token
+│               └── utils.ts
+│
+└── organizational-climate-lp/           # Frontend — Landing Page
+    └── lp-organizational/
+        └── src/
+            └── app/                      # Página institucional (Next.js App Router)
 ```
 
 ---
@@ -101,62 +229,52 @@ Frontend        Backend         Database        Deploy
 ## 🚀 Instalação e Configuração
 
 ### Pré-requisitos
-- **Node.js** 18+ ([Download](https://nodejs.org/))
-- **Go** 1.21+ ([Download](https://golang.org/dl/))
-- **MySQL** 8.0+ ([Download](https://dev.mysql.com/downloads/))
-- **Git** ([Download](https://git-scm.com/))
 
-### 🔧 Setup Rápido com Docker
+- **Go** 1.23+ ([Download](https://golang.org/dl/))
+- **Node.js** 18+ e **npm** ([Download](https://nodejs.org/))
+- **PostgreSQL** 14+ ([Download](https://www.postgresql.org/download/))
+- **Git** ([Download](https://git-scm.com/))
+- **psql** (cliente PostgreSQL, incluso na instalação padrão do PostgreSQL)
+
+### Clone o Repositório
 
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/Murilo-The-Dev/organizational-climate-survey.git
 cd organizational-climate-survey
-
-# 2. Configure as variáveis de ambiente
-cp .env.example .env
-# Edite o arquivo .env com suas configurações
-
-# 3. Execute com Docker Compose
-docker-compose up -d
-
-# 4. Execute as migrações
-docker-compose exec backend go run migrations/migrate.go
-
-# 5. Acesse a aplicação
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8080
-# Documentação API: http://localhost:8080/swagger
 ```
 
-### ⚙️ Setup Manual (Desenvolvimento)
+---
 
-<details>
-<summary><strong>🗄️ 1. Configuração do Banco de Dados</strong></summary>
+### 🗄️ 1. Configuração do Banco de Dados (PostgreSQL)
 
 ```bash
-# Entrar no MySQL
-mysql -u root -p
+# Acessar o PostgreSQL
+psql -U postgres
 
-# Criar database
-CREATE DATABASE clima_organizacional;
-CREATE USER 'clima_user'@'localhost' IDENTIFIED BY 'sua_senha_aqui';
-GRANT ALL PRIVILEGES ON clima_organizacional.* TO 'clima_user'@'localhost';
-FLUSH PRIVILEGES;
+# Criar o banco de dados
+CREATE DATABASE organizational_climate;
+\q
 
-# Executar migrações
-cd database
-mysql -u clima_user -p clima_organizacional < migrations/001_create_tables.sql
-mysql -u clima_user -p clima_organizacional < migrations/002_add_indexes.sql
-mysql -u clima_user -p clima_organizacional < migrations/003_create_views.sql
+# Configurar o schema de controle de migrações
+cd backend
+psql -U postgres -d organizational_climate -f migrations/000_setup_migrations.sql
 
-# Dados de teste (opcional)
-mysql -u clima_user -p clima_organizacional < seeds/demo_data.sql
+# Aplicar todas as migrações pendentes via script
+chmod +x migrate.sh
+./migrate.sh aplicar
 ```
-</details>
 
-<details>
-<summary><strong>🔧 2. Backend (Golang)</strong></summary>
+#### Comandos do `migrate.sh`
+
+```bash
+./migrate.sh aplicar            # Aplica migrações pendentes
+./migrate.sh status             # Exibe o status de cada migration
+./migrate.sh nova 'descrição'   # Cria um novo arquivo de migration
+```
+
+---
+
+### 🔧 2. Backend (Go)
 
 ```bash
 cd backend
@@ -166,205 +284,97 @@ go mod download
 
 # Configurar variáveis de ambiente
 cp .env.example .env
-# Edite as configurações de banco e JWT
+# Edite o arquivo .env com suas configurações
+```
 
-# Executar testes
-go test -v ./...
+**Variáveis de ambiente (`.env`):**
 
-# Executar em modo desenvolvimento
+```env
+# Aplicação
+APP_NAME=organizational-climate-survey
+APP_PORT=8080
+APP_ENV=development
+
+# Banco de dados (PostgreSQL)
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=sua_senha_aqui
+DB_NAME=organizational_climate
+DB_SSLMODE=disable
+
+# Autenticação JWT
+JWT_SECRET=seu_jwt_secret_muito_seguro_aqui
+
+# Segurança — salt para hash anônimo de submissões
+HASH_SALT=seu_hash_salt_aqui
+
+# Logs
+LOG_LEVEL=debug
+```
+
+```bash
+# Iniciar o servidor em modo desenvolvimento
 go run cmd/api/main.go
 
 # Build para produção
 go build -o bin/api cmd/api/main.go
+./bin/api
 ```
 
-**Variáveis de ambiente necessárias (.env):**
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=clima_user
-DB_PASSWORD=sua_senha_aqui
-DB_NAME=clima_organizacional
+O servidor estará disponível em:
+- **API Base URL:** `http://localhost:8080/api/v1`
+- **Health Check:** `http://localhost:8080/health`
 
-# JWT
-JWT_SECRET=seu_jwt_secret_muito_seguro_aqui
-JWT_EXPIRE_HOURS=24
+---
 
-# Server
-PORT=8080
-GIN_MODE=debug
-
-# CORS
-FRONTEND_URL=http://localhost:3000
-```
-</details>
-
-<details>
-<summary><strong>🎨 3. Frontend (Next.js)</strong></summary>
+### 🎨 3. Frontend — Ferramenta Administrativa
 
 ```bash
-cd frontend
+cd organizational-climate-tool/tool-organizational
 
 # Instalar dependências
 npm install
 
-# Configurar variáveis de ambiente
-cp .env.local.example .env.local
-# Edite a URL da API
+# Configurar variável de ambiente
+echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1" > .env.local
 
-# Executar em modo desenvolvimento
+# Iniciar em modo desenvolvimento
 npm run dev
-
-# Build para produção
-npm run build
-npm run start
-
-# Executar testes
-npm run test
-
-# Linting
-npm run lint
 ```
 
-**Variáveis de ambiente necessárias (.env.local):**
-```env
-# API
-NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+A ferramenta estará disponível em `http://localhost:3000`.
 
-# Features
-NEXT_PUBLIC_ENABLE_ANALYTICS=true
-NEXT_PUBLIC_MAX_FILE_SIZE=5242880
+**Scripts disponíveis:**
 
-# Analytics (opcional)
-NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
-```
-</details>
-
----
-
-## 🧪 Testes
-
-### Executar todos os testes
 ```bash
-# Backend
-cd backend && go test -v ./... -cover
-
-# Frontend
-cd frontend && npm run test
-
-# E2E (após iniciar aplicação)
-cd frontend && npm run test:e2e
-
-# Testes de carga
-cd scripts && ./load_test.sh
+npm run dev      # Servidor de desenvolvimento
+npm run build    # Build de produção
+npm run start    # Inicia o build de produção
+npm run lint     # Verificação de lint
 ```
 
-### Coverage Reports
+---
+
+### 🌐 4. Frontend — Landing Page
+
 ```bash
-# Backend
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+cd organizational-climate-lp/lp-organizational
 
-# Frontend
-npm run test:coverage
+# Instalar dependências
+npm install
+
+# Iniciar em modo desenvolvimento
+npm run dev
 ```
 
----
-
-## 📊 Status do Desenvolvimento
-
-### 🎯 Roadmap
-
-#### ✅ Fase 1 - Setup e Infraestrutura (Semana 1-2)
-- [x] Repositório Git configurado
-- [ ] CI/CD implementado
-- [ ] Arquitetura definida
-- [ ] Ambiente de desenvolvimento
-
-#### 🔄 Fase 2 - Autenticação (Semana 3-4)
-- [ ] Sistema de login JWT
-- [ ] Middleware de autenticação  
-- [ ] Gestão de empresas/setores
-- [ ] Dashboard administrativo
-
-#### 📋 Fase 3 - Pesquisas (Semana 5-8)
-- [ ] Criação de formulários
-- [ ] Sistema de perguntas dinâmico
-- [ ] Geração de links/QR codes
-- [ ] Interface pública de resposta
-- [ ] Sistema de recorrência
-
-#### 📈 Fase 4 - Analytics (Semana 9-12)
-- [ ] Dashboards interativos
-- [ ] Relatórios exportáveis
-- [ ] Análises históricas
-- [ ] Segmentação por setor
-
-#### 🔍 Fase 5 - Testes e Deploy (Semana 13)
-- [ ] Testes E2E completos
-- [ ] Performance testing
-- [ ] Deploy em produção
-- [ ] Documentação final
-
-### 📈 Métricas de Qualidade
-
-| Métrica | Target | Atual | Status |
-|---------|--------|-------|--------|
-| Test Coverage (Backend) | >80% | 75% | 🟡 |
-| Test Coverage (Frontend) | >70% | 60% | 🟡 |
-| Performance (API) | <2s | <1.5s | ✅ |
-| Performance (Frontend) | <3s | <2s | ✅ |
-| Lighthouse Score | >90 | 85 | 🟡 |
+A landing page estará disponível em `http://localhost:3001` (ou outra porta disponível).
 
 ---
 
-## 📚 Documentação
+## 🔌 API — Principais Endpoints
 
-### 📋 Documentação Principal
-- [📖 Documentação Completa do Sistema](docs/Doc%20Sistema%20Extensão.pdf)
-- [🏗️ Guia de Arquitetura](docs/architecture.md)
-- [🔧 Manual de Instalação](docs/installation.md)
-- [👤 Manual do Usuário](docs/user-guide.md)
-
-### 🔌 API Reference
-- [📡 Swagger Documentation](http://localhost:8080/swagger)
-- [🛠️ Endpoints Reference](docs/api/endpoints.md)
-- [🔐 Autenticação](docs/api/authentication.md)
-- [📊 Analytics APIs](docs/api/analytics.md)
-
-### 🗄️ Database
-- [📊 Modelo Entidade Relacionamento](docs/database/er-diagram.png)
-- [📝 Dicionário de Dados](docs/database/data-dictionary.md)
-- [🔄 Guia de Migrações](database/README.md)
-
----
-
-## 🛡️ Segurança e Conformidade
-
-### 🔒 Medidas de Segurança Implementadas
-- **JWT Authentication** com refresh tokens
-- **Rate Limiting** em endpoints sensíveis  
-- **CORS** configurado adequadamente
-- **SQL Injection** prevenção via ORM/prepared statements
-- **XSS Protection** com sanitização de inputs
-- **HTTPS** obrigatório em produção
-- **Logs de auditoria** completos
-
-### ⚖️ Conformidade LGPD
-- **Anonimização completa** de respostas
-- **Minimização de dados** - apenas dados necessários
-- **Transparência** - usuários informados sobre tratamento
-- **Direito de exclusão** - dados podem ser removidos
-- **Logs de auditoria** para rastreabilidade
-- **Criptografia** em dados sensíveis
-
----
-
-## 🌐 APIs e Integrações
-
-### 🔌 Principais Endpoints
+Todos os endpoints protegidos requerem o header `Authorization: Bearer <token>`.
 
 <details>
 <summary><strong>🔐 Autenticação</strong></summary>
@@ -383,105 +393,239 @@ Content-Type: application/json
 GET /api/v1/auth/me
 Authorization: Bearer <token>
 ```
-</details>
-
-<details>
-<summary><strong>📋 Pesquisas</strong></summary>
 
 ```http
-GET /api/v1/pesquisas
-Authorization: Bearer <token>
-
-POST /api/v1/pesquisas
-Authorization: Bearer <token>
+POST /api/v1/bootstrap
 Content-Type: application/json
-
-{
-  "titulo": "Pesquisa Q1 2025",
-  "descricao": "Avaliação trimestral",
-  "setor_id": 1,
-  "dataAbertura": "2025-01-15T09:00:00Z",
-  "dataFechamento": "2025-01-30T18:00:00Z"
-}
+# Cria empresa e primeiro administrador (setup inicial)
 ```
+
 </details>
 
 <details>
-<summary><strong>📊 Analytics</strong></summary>
+<summary><strong>🏢 Empresas e Setores</strong></summary>
 
 ```http
-GET /api/v1/pesquisas/{id}/dashboard
-Authorization: Bearer <token>
+GET    /api/v1/empresas
+POST   /api/v1/empresas
+GET    /api/v1/empresas/{id}
+PUT    /api/v1/empresas/{id}
+DELETE /api/v1/empresas/{id}
 
-GET /api/v1/pesquisas/{id}/analytics/export/xlsx
-Authorization: Bearer <token>
+GET    /api/v1/setores
+POST   /api/v1/setores
+GET    /api/v1/setores/{id}
+PUT    /api/v1/setores/{id}
+DELETE /api/v1/setores/{id}
 ```
+
 </details>
 
-### 📖 Documentação Completa da API
-Acesse [http://localhost:8080/swagger](http://localhost:8080/swagger) após iniciar o backend.
+<details>
+<summary><strong>👤 Usuários Administradores</strong></summary>
 
----
-
-### 📝 Padrões de Código
-
-#### Commits
-```bash
-feat(auth): adiciona endpoint de refresh token
-fix(dashboard): corrige cálculo de percentuais
-docs(api): atualiza documentação dos endpoints
-test(survey): adiciona testes para criação de pesquisa
+```http
+GET    /api/v1/usuarios
+POST   /api/v1/usuarios
+GET    /api/v1/usuarios/{id}
+PUT    /api/v1/usuarios/{id}
+DELETE /api/v1/usuarios/{id}
 ```
 
-#### Code Review Checklist
-- [ ] ✅ Código limpo e bem comentado
-- [ ] ✅ Testes unitários adicionados/atualizados
-- [ ] ✅ Documentação atualizada
-- [ ] ✅ Performance considerada
-- [ ] ✅ Segurança avaliada
-- [ ] ✅ Compatibilidade verificada
+</details>
+
+<details>
+<summary><strong>📋 Pesquisas e Perguntas</strong></summary>
+
+```http
+GET    /api/v1/pesquisas
+POST   /api/v1/pesquisas
+GET    /api/v1/pesquisas/{id}
+PUT    /api/v1/pesquisas/{id}
+DELETE /api/v1/pesquisas/{id}
+
+GET    /api/v1/pesquisas/{id}/perguntas
+POST   /api/v1/perguntas
+PUT    /api/v1/perguntas/{id}
+DELETE /api/v1/perguntas/{id}
+```
+
+</details>
+
+<details>
+<summary><strong>📝 Submissão Anônima de Respostas</strong></summary>
+
+```http
+# Rotas públicas — não requerem autenticação
+GET  /api/v1/public/pesquisas/{id}
+POST /api/v1/public/pesquisas/{id}/submissoes
+POST /api/v1/public/pesquisas/{id}/respostas
+```
+
+> A proteção contra múltiplas submissões é feita via hash anônimo do IP + fingerprint do respondente, sem armazenar dados identificáveis.
+
+</details>
+
+<details>
+<summary><strong>📊 Dashboard e Auditoria</strong></summary>
+
+```http
+GET /api/v1/dashboard
+GET /api/v1/dashboard/pesquisas/{id}
+
+GET /api/v1/logs
+GET /api/v1/logs/{id}
+```
+
+</details>
 
 ---
 
-## 📞 Suporte e Comunidade
+## 🛡️ Segurança e Conformidade
+
+### 🔒 Medidas de Segurança
+
+- **JWT Authentication** com `golang-jwt/v5` para sessões de administradores
+- **Bcrypt** para hash de senhas (`golang.org/x/crypto`)
+- **Hash anônimo** de IP/fingerprint para submissões (sem armazenar dados pessoais)
+- **CORS** configurado via middleware
+- **SQL Injection** prevenida via prepared statements (SQL puro com `database/sql`)
+- **Logs de auditoria** completos de todas as operações administrativas
+
+### ⚖️ Conformidade LGPD
+
+- **Anonimização completa** — respostas não são vinculadas a identificadores pessoais
+- **Minimização de dados** — apenas dados estritamente necessários são coletados
+- **Hash unidirecional** — impossível reverter IP/fingerprint ao dado original
+- **Direito de exclusão** — dados podem ser removidos pelo administrador
+- **Transparência** — respondentes informados sobre o tratamento de dados
+
+---
+
+## 📊 Roadmap
+
+#### ✅ Fase 1 — Setup e Infraestrutura
+- [x] Repositório Git configurado
+- [x] Arquitetura Clean Architecture definida
+- [x] Schema do banco de dados e migrações
+- [x] Script de migrações (`migrate.sh`)
+
+#### ✅ Fase 2 — Autenticação e Gestão
+- [x] Sistema de login JWT
+- [x] Middleware de autenticação
+- [x] CRUD de empresas e setores
+- [x] CRUD de usuários administradores
+- [x] Bootstrap (setup inicial do sistema)
+
+#### ✅ Fase 3 — Pesquisas
+- [x] Criação e edição de pesquisas
+- [x] Sistema de perguntas dinâmico
+- [x] Geração de links e QR Codes para compartilhamento
+- [x] Interface pública de resposta anônima
+- [x] Proteção contra múltiplas submissões
+
+#### 🔄 Fase 4 — Analytics e Relatórios
+- [x] Dashboard com gráficos interativos (Bar, Line, Pie, Radial, Stacked, NPS)
+- [x] Exportação de relatórios em PDF (jsPDF + html2canvas)
+- [ ] Análises históricas comparativas
+- [ ] Segmentação avançada por setor
+
+#### ⏳ Fase 5 — Testes e Deploy
+- [ ] Testes unitários (backend e frontend)
+- [ ] CI/CD
+- [ ] Deploy em produção
+- [ ] Documentação final da API
+
+---
+
+## 📝 Padrões de Código
+
+### Commits (Conventional Commits)
+
+```bash
+feat(pesquisas): adiciona endpoint de criação de pesquisa
+fix(dashboard): corrige cálculo de percentuais por setor
+docs(readme): atualiza stack tecnológica
+test(auth): adiciona testes para middleware JWT
+refactor(repos): migra queries para prepared statements
+```
+
+### Code Review Checklist
+
+- [ ] Código limpo e bem comentado
+- [ ] DTOs validados na camada de application
+- [ ] Erros tratados adequadamente
+- [ ] Logs de auditoria adicionados onde necessário
+- [ ] Segurança e anonimato preservados
+
+---
+
+## 📞 Equipe
+
+| Membro | GitHub |
+|--------|--------|
+| **Murilo Christofoletti** | [@Murilo-The-Dev](https://github.com/Murilo-The-Dev) |
+| **Geovanni Muniz** | [@geovanniz](https://github.com/geovanniz) |
+| **Guilherme Conceição** | [@rodriguesdev-ui](https://github.com/rodriguesdev-ui) |
+| **Alexandre Calore** | [@AlexandreCalore](https://github.com/AlexandreCalore) |
 
 ### 🐛 Reportar Bugs
-Encontrou um problema? [Abra uma issue](https://github.com/Murilo-The-Dev/sistema-clima-organizacional/issues) com:
+
+Encontrou um problema? [Abra uma issue](https://github.com/Murilo-The-Dev/organizational-climate-survey/issues) com:
 - Descrição detalhada do problema
 - Passos para reproduzir
 - Screenshots (se aplicável)
 - Ambiente (OS, browser, versões)
 
-### 💡 Sugerir Melhorias
-Tem uma ideia? [Abra uma feature request](https://github.com/SEU_USUARIO/sistema-clima-organizacional/issues/new?template=feature_request.md)
+---
 
-### 📧 Contato da Equipe
-- **Murilo Christofoletti** - [@murilo_christofoletti](https://github.com/Murilo-The-Dev)
-- **Geovanni Muniz** - [@geovanni_adri](https://github.com/geovanniz) 
-- **Guilherme Conceição** - [@rodriguesg.dev](https://github.com/rodriguesdev-ui)
-- **Alexandre Calore** - [@alexandre_calore1](https://github.com/AlexandreCalore)
+## 🏆 Tecnologias Utilizadas
+
+### Backend
+- [Go](https://golang.org/) — Linguagem principal
+- [gorilla/mux](https://github.com/gorilla/mux) — Roteamento HTTP
+- [golang-jwt/jwt](https://github.com/golang-jwt/jwt) — Autenticação JWT
+- [lib/pq](https://github.com/lib/pq) — Driver PostgreSQL
+- [google/uuid](https://github.com/google/uuid) — Geração de UUIDs
+- [godotenv](https://github.com/joho/godotenv) — Carregamento de `.env`
+- [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) — Bcrypt
+
+### Frontend (Ferramenta Administrativa)
+- [Next.js 15](https://nextjs.org/) — Framework React
+- [React 19](https://react.dev/) — Biblioteca UI
+- [TypeScript 5](https://www.typescriptlang.org/) — Tipagem estática
+- [Tailwind CSS v4](https://tailwindcss.com/) — Estilização
+- [Radix UI](https://www.radix-ui.com/) — Componentes acessíveis
+- [shadcn/ui](https://ui.shadcn.com/) — Sistema de componentes
+- [Recharts](https://recharts.org/) — Gráficos
+- [TanStack Table](https://tanstack.com/table) — Tabelas avançadas
+- [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) — Formulários e validação
+- [Axios](https://axios-http.com/) + [nookies](https://github.com/matipan/nookies) — HTTP e cookies
+- [jsPDF](https://github.com/parallax/jsPDF) + [html2canvas](https://html2canvas.hertzen.com/) — Exportação PDF
+- [react-qr-code](https://github.com/rosskhanas/react-qr-code) — Geração de QR Codes
+- [Sonner](https://sonner.emilkowal.ski/) — Notificações toast
+- [next-themes](https://github.com/pacocoursey/next-themes) — Tema claro/escuro
+- [lucide-react](https://lucide.dev/) — Ícones
+- [date-fns](https://date-fns.org/) — Manipulação de datas
+
+### Frontend (Landing Page)
+- [Next.js 15](https://nextjs.org/) — Framework React
+- [Tailwind CSS v4](https://tailwindcss.com/) — Estilização
+
+### Banco de Dados
+- [PostgreSQL](https://www.postgresql.org/) — SGBD relacional
 
 ---
 
-## 🏆 Reconhecimentos
+## 🎓 Instituição
 
-### 📚 Tecnologias Utilizadas
-- [Next.js](https://nextjs.org/) - Framework React
-- [Golang](https://golang.org/) - Linguagem backend
-- [MySQL](https://mysql.com/) - Banco de dados
-- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
-- [Recharts](https://recharts.org/) - Biblioteca de gráficos
-- [JWT](https://jwt.io/) - Autenticação
-- [Docker](https://docker.com/) - Containerização
-
-### 🎓 Instituição
-Projeto desenvolvido como **Extensão Curricular** do Centro Universitário Claretiano com foco em aplicação prática de conhecimentos acadêmicos em cenário real.
+Projeto desenvolvido como **Extensão Curricular** do **Centro Universitário Claretiano** com foco em aplicação prática de conhecimentos acadêmicos em cenário real.
 
 ---
 
 ## 📄 Licença
 
-Este projeto é um **trabalho acadêmico** desenvolvido para fins educacionais. 
+Este projeto é um **trabalho acadêmico** desenvolvido para fins educacionais.
 
 Para uso comercial ou adaptações, entre em contato com a equipe de desenvolvimento.
 
@@ -491,10 +635,8 @@ Para uso comercial ou adaptações, entre em contato com a equipe de desenvolvim
 
 **⭐ Se este projeto foi útil, considere dar uma estrela!**
 
-**🤝 Contribuições são sempre bem-vindas!**
-
 ---
 
-Feito com ❤️ pela equipe de Extensão Curricular
+Feito com ❤️ pela equipe de Extensão Curricular — Claretiano
 
 </div>
